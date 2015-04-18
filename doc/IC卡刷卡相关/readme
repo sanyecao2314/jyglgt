@@ -1,0 +1,5 @@
+jna.jar需要在以下两个位置加一下.
+nchome\ufjdk\jre\lib
+nchome\ufjdk\lib
+
+mwhrf_bj.dll 需要添加到客户端机器的C:\WINDOWS\system32下面.

@@ -1,0 +1,300 @@
+package nc.bs.jyglgt.postordao;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import nc.bs.jyglgt.dao.ServerDAO;
+import nc.bs.logging.Logger;
+import nc.bs.pub.pf.PfUtilBO;
+import nc.jdbc.framework.JdbcSession;
+import nc.jdbc.framework.PersistenceManager;
+import nc.jdbc.framework.exception.DbException;
+import nc.jdbc.framework.processor.MapListProcessor;
+import nc.ui.pub.billcodemanage.BillcodeRuleBO_Client;
+import nc.vo.ic.pub.bill.GeneralBillHeaderVO;
+import nc.vo.ic.pub.bill.GeneralBillItemVO;
+import nc.vo.ic.pub.bill.GeneralBillVO;
+import nc.vo.ic.pub.smallbill.SMGeneralBillVO;
+import nc.vo.jyglgt.bfsfcllog.BfsfclLogVO;
+import nc.vo.jyglgt.pub.Toolkits.Toolkits;
+import nc.vo.pub.BusinessException;
+import nc.vo.pub.lang.UFDate;
+
+
+/**
+ * @author 施鹏
+ * @功能： 物流自动化系统的收货过磅单后台处理类
+ * 
+ */
+public class PoStoreDAO extends ServerDAO {
+	public PoStoreDAO() {
+		super();
+	}
+
+	PersistenceManager sManager = null;
+	
+	/**
+	 * 
+	 */
+	String vbillcode = null;
+
+	/**
+	 * 更新收货榜单表数据
+	 * */
+	public void updateBFSFCL(String key,int flag,String datasource) throws BusinessException {
+		try {
+			JdbcSession session = getsManager(datasource).getJdbcSession();
+			String sql = " update BFSFCL set BFSFCL_RKBZ='"+flag+"',BFSFCL_RKDH='" + vbillcode + "' where BFSFCL_DJLX='1' and BFSFCL_DJBH='"+key+"'";
+			session.executeUpdate(sql);
+		} catch (DbException e) {
+			e.printStackTrace();
+			throw new BusinessException(e);
+		}
+
+	}
+
+	
+
+	
+	/**
+	 * 向中间表插入数据
+	 * */
+	public void insertIntePoStorByBfgl(String datasource) throws BusinessException {
+		insertIntePoStore(datasource);
+	}
+
+	/**
+	 * 插入中间表数据
+	 * @throws BusinessException 
+	 * **/
+    public void insertIntePoStore(String datasource) throws BusinessException{
+		try {
+			JdbcSession session = getsManager(datasource).getJdbcSession();
+			// 查询语句    BFSFCL_RKBZ:入库标志 0:未入库；1：采购
+			String sql = "select  * from BFSFCL  where BFSFCL_RKBZ='0' and BFSFCL_C13='1'";
+			// 数据库访问操作
+			ArrayList al = (ArrayList) session.executeQuery(sql,new MapListProcessor());
+			// 遍历结果集
+			if (al!=null&&al.size() > 0) {
+				for (int i = 0; i < al.size(); i++) {
+					HashMap hm = (HashMap) al.get(i);
+					String cgeneralhid = null;
+					try{
+						//判断传输值是否已经存在，如果有则跳过
+						String intehsql = "select cgeneralhid from ic_general_h where cbilltypecode ='45' and vuserdef20 ='"+Toolkits.getUFDouble(hm.get("bfsfcl_djbh"))+"' ";
+						String pk_gen=queryStrBySql(intehsql);
+						if(pk_gen!=null&&!pk_gen.equals("")){
+							continue;
+						}
+						//传输数据到库存采购入库单
+    					cgeneralhid=insertGen(hm); 
+    					//更新自动化系统标记
+    					updateBFSFCL(Toolkits.getString(hm.get("bfsfcl_djbh")),1,datasource);
+					}catch(Exception e){
+						e.printStackTrace();
+						//保存传输过程出现的错误历史记录
+						insertExLog(e,Toolkits.getString(hm.get("bfsfcl_djbh")),Toolkits.getString(hm.get("bfsfcl_c12")));					
+						continue;
+					}
+					//将已经传输成功的在错误历史记录还有的数据清除掉
+					delExLog(Toolkits.getString(hm.get("bfsfcl_djbh")));
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new BusinessException(e);
+		} 
+		finally {
+			if (sManager != null)
+				sManager.release();// 需要关闭会话
+		}
+    }
+    
+
+    
+    /**
+     * 保存传输过程出现的错误历史记录
+     * */
+    private void insertExLog(Exception e,String bfsfcl_djbh,String pk_corp){
+		BfsfclLogVO logvo=new BfsfclLogVO();
+		logvo.setDr(new Integer(0));
+		logvo.setBilltype("45");
+		logvo.setPk_corp(pk_corp);
+		logvo.setBfsfcl_djbh(bfsfcl_djbh);
+		logvo.setExlog(e.getMessage());
+		try {
+			insertVObackPK(null);
+		} catch (BusinessException e1) {
+			e1.printStackTrace();
+			Logger.debug("保存传输过程出现的错误历史记录出现异常:insertExLog,可能是网络异常");
+		}
+    }
+    
+    /**
+     * 将已经传输成功的在错误历史记录还有的数据清除掉
+     * */
+    private void delExLog(String bfsfcl_djbh){
+    	String sql=" select pk_bfsfcllog from jyglgt_bfsfcllog  where bfsfcl_djbh='"+bfsfcl_djbh+"' ";
+    	ArrayList<HashMap<String,String>> list= null;
+		try {
+			list = queryArrayBySql(sql);
+	    	if(list!=null&&list.size()>0){
+	    		for(HashMap<String,String> map:list){
+		    		String delsql=" delete from  jyglgt_bfsfcllog where pk_bfsfcllog='"+map.get("pk_bfsfcllog")+"'";
+		    		updateBYsql(delsql);
+	    		}
+	    	}
+		} catch (BusinessException e) {
+			e.printStackTrace();
+			Logger.debug("将已经传输成功的在错误历史记录还有的数据清除掉出现异常:delExLog,可能是网络异常");
+		}
+
+    }
+
+	private PersistenceManager getsManager(String datasource) throws DbException {
+		if (sManager == null)
+			sManager = PersistenceManager.getInstance(datasource);
+		return sManager;
+	}
+	
+	private String u8TsToNcTs(String u8Ts){
+		String ncTs="";
+		if(u8Ts==null||u8Ts.equalsIgnoreCase("")||u8Ts.length()<=19){
+			ncTs=u8Ts;
+		}else{
+			ncTs=u8Ts.substring(0,19);
+		}
+		return ncTs;
+	}
+
+	
+	/**
+	 * 生成库存采购入库单
+	 * @throws BusinessException 
+	 * **/
+    public String insertGen(HashMap hm) throws BusinessException{
+    	String pk_corp=Toolkits.getString(hm.get("bfsfcl_c12"));
+		GeneralBillHeaderVO genHVO = new GeneralBillHeaderVO();
+//		String cuserid = getCuserid(Toolkits.getString(hm.get("bfsfcl_sby")));
+		String cuserid = getCuserid("0000");
+		if("".equals(cuserid)){
+			throw new BusinessException("根据司磅员传入的值，没有在用户档案中查询到用户！"); 
+		}
+		genHVO.setAttributeValue("coperatorid", cuserid);//制单人
+		UFDate resdate = getNCDateFormat(hm.get("bfsfcl_rq"));//转成NC的格式 8位外系统'20140122' --->'2014-01-22'
+		genHVO.setAttributeValue("dbilldate", resdate);//单据日期
+		String cwarehouseid = getCwarehouseid(Toolkits.getString(hm.get("bfsfcl_ckbh")),pk_corp);
+		if("".equals(cwarehouseid)){
+			throw new BusinessException("根据传输的仓库编码没有找到仓库！");
+		}
+		genHVO.setAttributeValue("cwarehouseid", cwarehouseid);//仓库	
+		String custpk = getDocPkByCode(pk_corp,Toolkits.getString(hm.get("bfsfcl_shbh")),2);
+		if("".equals(custpk)){
+			throw new BusinessException("根据供应商编码传入的值，没有在客商档案中找到！");
+		}
+		genHVO.setAttributeValue("cproviderid",custpk);////供应商ID
+		if("".equals(getPk_calbody(cwarehouseid))){
+			throw new BusinessException("库存组织为空！");
+		}
+		genHVO.setAttributeValue("pk_calbody",getPk_calbody(cwarehouseid));//库存组织PK
+		String pk_cubasdoc=getCustcode(Toolkits.getString(hm.get("bfsfcl_shbh")));
+		genHVO.setAttributeValue("pk_cubasdoc",pk_cubasdoc);//供应商基本档案ID
+		genHVO.setAttributeValue("vuserdef19",Toolkits.getString(hm.get("bfsfcl_clbh")));//车号
+		genHVO.setAttributeValue("vuserdef20",Toolkits.getString(hm.get("bfsfcl_djbh")));//单据编号
+		try {
+			//生成单据编号
+			String billNo = BillcodeRuleBO_Client.getBillCode("45", pk_corp,null, null);
+			if(billNo!=null)
+				genHVO.setVbillcode(billNo);
+			else
+				genHVO.setVbillcode("45000001");
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		vbillcode = genHVO.getVbillcode();
+		genHVO.setAttributeValue("fbillflag", nc.vo.pub.VOStatus.NEW);//Toolkits.getInteger(saleHVO.getIverifystate()).toString());//单据状态
+		genHVO.setAttributeValue("cbilltypecode", "45");//
+		genHVO.setAttributeValue("pk_corp",pk_corp);//pk_corp
+		genHVO.setAttributeValue("dr", 0);
+		
+		
+		String pk_order = getPo_order(String.valueOf(hm.get("BFSFCL_KZZD")));
+		if("".equals(pk_order)){
+			throw new BusinessException("查找不到对应的采购订单");
+		}
+		
+		
+		//子表
+		GeneralBillItemVO[] genBVO = new GeneralBillItemVO[1];
+    	for (int i = 0; i < genBVO.length; i++) {
+    		genBVO[i]  = new GeneralBillItemVO();
+    		genBVO[i].setAttributeValue("dr", 0);
+    		genBVO[i].setAttributeValue("pk_corp", pk_corp);
+    		genBVO[i].setDbizdate( genHVO.getDbilldate());   		
+    		ArrayList<HashMap<String, String>> listpkm = getPk_invmb(Toolkits.getString(hm.get("bfsfcl_wlbh")), pk_corp);
+    		if(listpkm.size()==0){
+    			throw new BusinessException("存货编码"+Toolkits.getString(hm.get("bfsfcl_wlbh"))+"在NC中没有维护！");
+    		}
+    		genBVO[i].setAttributeValue("crowno", 10*(i+1));//行号
+    		genBVO[i].setAttributeValue("cinventoryid", listpkm.get(0).get("pk_invmandoc"));//存货管理档案
+    		genBVO[i].setAttributeValue("cinvbasid", listpkm.get(0).get("pk_invbasdoc"));//存货基本档案
+    		
+    		
+    		String pk_order_b = getPo_order_b(listpkm.get(0).get("pk_invbasdoc"), pk_order);
+    		if("".equals(pk_order_b)){
+    			throw new BusinessException("查找不到对应的采购订单表体行");
+    		}
+    		genBVO[i].setAttributeValue("csourcebillhid ", pk_order);//来源单据表头序列号
+    		genBVO[i].setAttributeValue("csourcebillbid", pk_order_b); //来源单据表体序列号
+    		
+    		
+//    		genBVO[i].setAttributeValue("dvalidate", Toolkits.getUFDate(salebvo[i].getDvdate()));//失效日期
+//    		genBVO[i].setAttributeValue("scrq", Toolkits.getUFDate(saleHVO.getDveridate().substring(0, 10)));//生产日期
+    		genBVO[i].setAttributeValue("nshouldinnum", Toolkits.getUFDouble(hm.get("bfsfcl_yssl")));//应收数量
+//    		genBVO[i].setNneedinassistnum(Toolkits.getUFDouble(hm.get("bfsfcl_wlbh")));//应收辅数量
+    		genBVO[i].setAttributeValue("ninnum", Toolkits.getUFDouble(hm.get("bfsfcl_u4")));//实收数量
+//    		genBVO[i].setAttributeValue("ninassistnum", Toolkits.getUFDouble(salebvo[i].getIfnum()));//实收辅数量
+    		genBVO[i].setAttributeValue("nprice", Toolkits.getUFDouble(hm.get("bfsfcl_dj")));//单价
+    		genBVO[i].setAttributeValue("nmny", Toolkits.getUFDouble(hm.get("bfsfcl_je")));//金额
+    		genBVO[i].setAttributeValue("nplannedprice", Toolkits.getUFDouble(hm.get("bfsfcl_dj")));//单价
+    		genBVO[i].setAttributeValue("nplannedmny", Toolkits.getUFDouble(hm.get("bfsfcl_je")));//金额
+    		ArrayList<HashMap<String, String>> listhsljldw = new ArrayList<HashMap<String,String>>();
+    		listhsljldw = getHslJldw(listpkm.get(0).get("pk_invbasdoc"));
+    		if(listhsljldw.size()>0){
+    			genBVO[i].setAttributeValue("castunitid", listhsljldw.get(0).get("pk_measdoc1"));//辅计量单位
+    			genBVO[i].setAttributeValue("hsl", listhsljldw.get(0).get("mainmeasrate"));//换算率
+    		}    		
+		}
+		GeneralBillVO billvo = new GeneralBillVO();
+		SMGeneralBillVO billvoreturn = new SMGeneralBillVO();
+		billvo.setParentVO(genHVO);
+		billvo.setChildrenVO(genBVO);
+		billvo.setIsCheckCredit(true);
+		billvo.setIsCheckPeriod(true);
+		billvo.setIsCheckAtp(true);
+		billvo.setGetPlanPriceAtBs(false);
+		billvo.setIsRwtPuUserConfirmFlag(false);
+		billvo.setStatus(nc.vo.pub.VOStatus.NEW);
+		billvo.m_sActionCode = "WRITE";//新增状态
+		try {
+			//获取返回值
+			ArrayList al = (ArrayList) new PfUtilBO().processAction("WRITE", "45", genHVO.getDbilldate().toString(), null, billvo, null);
+			billvoreturn = (SMGeneralBillVO) al.get(2);
+		} catch (Exception e) {
+//			showErrorMessage(""+e);
+			e.printStackTrace();
+			throw new BusinessException(e.getMessage());
+		}
+		return billvoreturn.getPrimaryKey();
+    }
+    
+    private UFDate getNCDateFormat(Object object) {
+		if(object == null || object.toString().length() != 8){
+			return null;
+		}
+		String oldstr = object.toString().substring(0, 4)+"-"+object.toString().substring(4, 6)+"-"+object.toString().substring(6, 8);
+		return new UFDate(oldstr);
+	}
+ 
+}

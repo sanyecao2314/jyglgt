@@ -1,0 +1,15 @@
+drop table jyglgt_bfsfcllog cascade constraints;
+
+/*==============================================================*/
+/* Table: jyglgt_bfsfcllog                                      */
+/*==============================================================*/
+create table jyglgt_bfsfcllog 
+(
+   pk_bfsfcllog         CHAR(20)             not null,
+   bfsfcl_djbh          varchar2(30),
+   exlog                VARCHAR2(1024),
+   ts                   CHAR(19),
+   dr                   SMALLINT,
+   pk_corp              CHAR(20),
+   constraint PK_JYGLGT_BFSFCLLOG primary key (pk_bfsfcllog)
+);

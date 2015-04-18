@@ -1,0 +1,1 @@
+insert into pub_query_templet(DESCRIBE,DR,FIXCONDITION,ID,METACLASS,MODEL_CODE,MODEL_NAME,NODE_CODE,PK_CORP,RESID,TS) values( null,0,null,'0001AA100000000IWX4E',null,'400670','销售价格政策','400670','@@@@',null,'2014-10-23 10:48:03') ;

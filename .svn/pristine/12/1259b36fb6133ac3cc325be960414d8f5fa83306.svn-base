@@ -1,0 +1,55 @@
+package nc.ui.jyglgt.j40068b; 
+  
+import nc.ui.jyglgt.billmanage.AbstractCtrl;
+import nc.ui.trade.bill.ISingleController;
+import nc.vo.jyglgt.button.ButtonTool;
+import nc.vo.jyglgt.button.IJyglgtButton;
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillType;
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtConst;
+import nc.vo.trade.pub.HYBillVO;
+  
+/** 
+ * @author 自动生成 
+ * 名称: 优惠价格单CTRL类 
+*/ 
+public class ClientCtrl extends AbstractCtrl implements ISingleController { 
+  
+ 	public String getBillType() { 
+ 		return IJyglgtBillType.JY05; 
+ 	} 
+  
+ 	public String[] getBillVoName() { 
+ 		return new String[] {  
+ 				HYBillVO.class.getName(), 
+ 				nc.vo.jyglgt.j40068b.PricediscountVO.class.getName(), 
+ 				nc.vo.jyglgt.j40068b.PricediscountVO.class.getName()}; 
+ 	} 
+  
+ 	public int[] getCardButtonAry() { 
+ 		int[] delbtns = ButtonTool.deleteButton(IJyglgtButton.Line, IJyglgtConst.CARD_BUTTONS_M);
+ 		int[] newbtns = ButtonTool.insertButtons(new int[]{IJyglgtButton.BTN_COMMIT,IJyglgtButton.BTN_PASS,IJyglgtButton.BTN_UNPASS}, delbtns, delbtns.length-1);
+ 		return newbtns;
+ 	} 
+  
+ 	public int[] getListButtonAry() { 
+ 		return IJyglgtConst.LIST_BUTTONS_M; 
+ 	} 
+  
+ 	public String getPkField() { 
+ 		return "pk_pricediscount"; 
+ 	} 
+  
+ 	@Override 
+ 	public String getChildPkField() { 
+ 		return null; 
+ 	} 
+ 	 /** 
+ 	 * 是否单表体,=true单表体，=false单表头。
+  	 * 创建日期：(2004-2-5 13:43:00) 
+ 	 * @return boolean 
+ 	 */ 
+ 	public boolean isSingleDetail() { 
+ 		return false; 
+ 	} 
+  
+} 

@@ -1,0 +1,3 @@
+insert into bd_refinfo (CODE, DR, ISNEEDPARA, ISSPECIALREF, METADATATYPENAME, MODULE, NAME, PARA1, PARA2, PARA3, PK_REFINFO, REFCLASS, REFSYSTEM, REFTYPE, RESERV1, RESERV2, RESERV3, RESID, RESIDPATH, TS)
+values ('DJGDQ', 0, '', '', '', 'uap', '价格地区', '0001AA100000000IW1HT', '', '', '0001AA100000000IW1HV', 'nc.ui.bd.def.DefaultDefdocRefModel', '', 1, '', '', '', '价格地区', 'uap', '2014-10-11 12:36:01');
+

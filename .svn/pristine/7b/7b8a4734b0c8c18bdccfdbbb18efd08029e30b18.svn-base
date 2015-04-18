@@ -1,0 +1,121 @@
+package nc.ui.jyglgt.j400675; 
+  
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import nc.ui.jyglgt.billmanage.AbstractClientUI; 
+import nc.ui.pub.bill.BillEditEvent;
+import nc.ui.pub.bill.BillModel;
+import nc.ui.trade.bill.AbstractManageController; 
+import nc.ui.trade.manage.ManageEventHandler; 
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillType;
+import nc.vo.jyglgt.pub.Toolkits.Toolkits;
+import nc.vo.pub.lang.UFDouble;
+ 
+/** 
+ * 名称: 调拨价格政策UI类 
+*/ 
+public class ClientUI extends AbstractClientUI { 
+  
+	public ClientUI() { 
+	} 
+  
+ 	public ManageEventHandler createEventHandler() { 
+ 		return new ClientEventHandler(this, this.createController()); 
+ 	} 
+  
+ 	protected AbstractManageController createController() { 
+ 		return new ClientCtrl(); 
+ 	} 
+  
+	public void setDefaultData() throws Exception {
+		super.setDefaultData();
+		getBillCardPanel().getHeadItem("billtype").setValue(IJyglgtBillType.JY03);
+		getBillCardPanel().getHeadItem("sdate").setValue(_getDate());
+		getBillCardPanel().getHeadItem("stime").setValue(_gettime());
+		getBillCardPanel().getHeadItem("edate").setValue(_getDate());
+		getBillCardPanel().setHeadItem("etime", "23:59:59");
+		getBillCardPanel().execHeadLoadFormulas();
+	}
+	//获得当前时间
+	private String _gettime() {
+		String str = new SimpleDateFormat("HH:mm:ss").format(new Date());
+		return str;
+	}
+
+	
+	/**
+	 * 调整单价
+	 * */
+	private void TZhsprice(UFDouble adjustsprice) {
+		for(int i=0;i<getBillCardPanel().getRowCount();i++){
+			UFDouble hsprice=getBodyValue("hsprice", i)==null?new UFDouble(0):new UFDouble(getBodyValue("hsprice", i).toString());
+			UFDouble tzhsprice=hsprice.add(adjustsprice);
+			if(tzhsprice.doubleValue()>0){
+				getBillCardPanel().getBillModel().setRowState(i, BillModel.MODIFICATION);
+				setBodyValue(tzhsprice, i, "hsprice");
+			}
+		}
+//		String memo=getHeadValueObject("memo")==null?"":getHeadValueObject("memo").toString();
+//		if(memo.equals("")){
+//			setHeadValue("memo", ""+_getServerTime()+"调整单价'"+Toolkits.getString(adjustsprice)+"'成功！");
+//		}else{
+//		    setHeadValue("memo", ""+memo+"\n"+_getServerTime()+"调整单价'"+Toolkits.getString(adjustsprice)+"'成功！");
+//		}
+//		setHeadValue("adjustsprice", null);
+//		showHintMessage("调整单价'"+Toolkits.getString(adjustsprice)+"'成功！");
+	}
+	
+	/**
+	 * 由自定义下限带出自定义上限
+	 * */
+	private void free0TOFree1(BillEditEvent e, String free0, String free1) {
+		if(e.getKey().equals(free0)){
+			Object free0value=getBodyValue(free0, e.getRow());
+			if(!Toolkits.isEmpty(free0value)){
+				setBodyValue(free0value.toString(), e.getRow(), free1);
+			}
+		}
+	}
+	
+	@Override
+	public void afterEdit(BillEditEvent e) {
+		// TODO Auto-generated method stub
+		super.afterEdit(e);
+		String[] free0={"free1_0","free2_0","free3_0"};
+		String[] free1={"free1_1","free2_1","free3_1"};
+		for(int i=0;i<free0.length;i++){
+		    free0TOFree1(e,free0[i],free1[i]);//由自定义下限带出自定义上限
+		}
+
+		//调整单价
+		if(e.getKey().equals("adjustprice")){
+			UFDouble adjustprice=getHeadValueObject("adjustprice")==null?new UFDouble(0):new UFDouble(getHeadValueObject("adjustprice").toString());
+			if(adjustprice.doubleValue()!=0){
+				TZhsprice(adjustprice);
+			}
+		}
+	}
+
+	@Override
+	public boolean beforeEdit(BillEditEvent e) {
+//		beforevinvcode(e);//存货编辑前参照控制
+		return super.beforeEdit(e);
+	}
+	/**
+	 * 功能：存货编辑前参照控制
+	 * */
+//	private void beforevinvcode(BillEditEvent e) {
+//		if(e.getKey().equals("invcode")){
+//			StringBuffer sb=new StringBuffer();
+//	        UIRefPane pane = (UIRefPane)getBillCardPanel().getBodyItem("invcode").getComponent();
+//	        if(pane!=null){
+//	        	String productline=Toolkits.getString(getHeadValueObject("pk_product"));
+//	        	sb.append(" and bd_invbasdoc.pk_prodline='"+productline+"' ");
+//	    		pane.getRef().getRefModel().addWherePart(sb.toString(),true);
+//	    	}
+//	    	pane.updateUI();
+//			
+//		}
+//	}
+
+} 

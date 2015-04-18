@@ -1,0 +1,71 @@
+package nc.vo.jyglgt.pub.Toolkits;
+
+import nc.ui.trade.base.IBillOperate;
+import nc.ui.trade.button.IBillButton;
+import nc.vo.jyglgt.button.IJyglgtButton;
+import nc.vo.jyglgt.pub.StateVO;
+
+
+/**
+ * 说明: 状态机,判断单据状态,自动更新界面按钮状态
+ * 
+ * @author 公共开发者 2012-1-5
+ */
+public class StateMachine {
+	public StateMachine() {
+		super();
+	}
+
+    /**
+     * 根据提供的动作和单据的状态，判断动作是否可以执行
+     * @param voCurState BgtStateVO
+     * @param iRoleType int
+     * @param btn String
+     * @return boolean
+     */
+    public boolean isVaidAction(StateVO voState, int btn) {
+        // 评审通过按钮，提交态、自由态时可编辑
+        // 修改，自由态时可编辑
+        if(btn==IBillButton.Edit&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS)){
+        	return true;}
+        // 打印，自由态、未审核、审核态时可编辑
+        if(btn==IBillButton.Print&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS||voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+        	return true;
+        }// 删除，自由态时可编辑
+        else if(btn==IBillButton.Delete&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS)){
+        	return true;
+        }else if(btn == IBillButton.Copy&& (voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS||voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+			return true;
+		}else if(btn==999&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_IMPORT&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS||voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_EXPORT&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.NOPASS||voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_PASS&&(voState.getBillStatus() == IJyglgtBillStatus.FREE ||voState.getBillStatus() == IJyglgtBillStatus.COMMIT||voState.getBillStatus() == IJyglgtBillStatus.CHECKGOING)){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_FREQ&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS )){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_UNPASS&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS )){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_COMMIT&&(voState.getBillStatus() == IJyglgtBillStatus.FREE )){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_CONFIRM&&(voState.getBillStatus() == IJyglgtBillStatus.FREE )){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_CANCELCONFIRM&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS )){
+        	return true;
+        }else if(btn==IJyglgtButton.BTN_DOMAIL&&(voState.getBillStatus() == IJyglgtBillStatus.FREE )){
+        	return true;
+        	//包装汇总
+//        }else if(btn==IJyglgtButton.BTN_BZHZ&&(voState.getBillStatus() == IJSHMYBillStatus.NOPASS ||voState.getBillStatus() != IBillOperate.OP_INIT)){
+//        	return true;
+	    	//修订
+	    }else if(btn==IJyglgtButton.BTN_XIUDING&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){
+	    	return true;
+	    }else if(btn==IJyglgtButton.BTN_TIMECHANGE&&(voState.getBillStatus() == IJyglgtBillStatus.CHECKPASS)){//时间调整
+	    	return true;
+	    }
+		return false;
+	}
+
+}

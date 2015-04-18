@@ -1,0 +1,50 @@
+package nc.ui.jyglgt.j40068b; 
+  
+import nc.ui.bd.ref.busi.PsndocDefaulRefModel;
+import nc.ui.jyglgt.billmanage.AbstractClientUI;
+import nc.ui.pub.beans.UIRefPane;
+import nc.ui.pub.bill.BillEditEvent;
+import nc.ui.trade.bill.AbstractManageController;
+import nc.ui.trade.manage.ManageEventHandler;
+ 
+/** 
+ * @author 自动生成 
+ * 名称: 优惠价格单UI类 
+*/ 
+public class ClientUI extends AbstractClientUI { 
+	
+	private String oldclasswherepart = null;
+  
+	public ClientUI() { 
+	} 
+	
+	@Override
+	protected void postInit() {
+		super.postInit();
+		UIRefPane panel = (UIRefPane) getBillCardPanel().getHeadItem("commitmanid").getComponent();
+		nc.ui.bd.ref.busi.PsndocDefaulRefModel refm = (PsndocDefaulRefModel) panel.getRefModel();
+		oldclasswherepart = refm.getClassWherePart();
+	}
+  
+ 	public ManageEventHandler createEventHandler() { 
+ 		return new ClientEventHandler(this, this.createController()); 
+ 	} 
+  
+ 	protected AbstractManageController createController() { 
+ 		return new ClientCtrl(); 
+ 	} 
+ 	
+ 	@Override
+ 	public void afterEdit(BillEditEvent e) {
+ 		super.afterEdit(e);
+ 		if(e.getKey().equals("pk_dept")){
+ 			UIRefPane panel = (UIRefPane) getBillCardPanel().getHeadItem("commitmanid").getComponent();
+ 			nc.ui.bd.ref.busi.PsndocDefaulRefModel refm = (PsndocDefaulRefModel) panel.getRefModel();
+ 			String pk_dept = getHeadValueObject("pk_dept")==null?null:getHeadValueObject("pk_dept").toString();
+ 			if(pk_dept != null)
+ 				refm.setClassWherePart(refm.getClassWherePart()+" and pk_deptdoc='"+pk_dept+"' ");
+ 			else
+ 				refm.setClassWherePart(oldclasswherepart);
+ 		}
+ 	}
+} 

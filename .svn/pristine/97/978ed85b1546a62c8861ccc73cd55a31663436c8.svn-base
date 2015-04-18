@@ -1,0 +1,205 @@
+package nc.ui.jyglgt.j40068d;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import nc.pub.jyglgt.proxy.Proxy;
+import nc.ui.jyglgt.billmanage.AbstractCtrl;
+import nc.ui.jyglgt.billmanage.AbstractEventHandler;
+import nc.ui.pub.bill.BillEditEvent;
+import nc.vo.jyglgt.j40068c.BalanceListBVO;
+import nc.vo.jyglgt.j40068c.ExAggSellPaymentJSVO;
+import nc.vo.pub.AggregatedValueObject;
+import nc.vo.pub.BusinessException;
+import nc.vo.pub.lang.UFDouble;
+
+
+/**
+ * @功能：优惠结算
+ */
+public class ClientUI extends nc.ui.jyglgt.j40068c.ClientUI {
+
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public ClientUI() {
+		super();
+	}
+	
+	// 得到界面控制类
+	protected AbstractCtrl createController() {
+		return new ClientCtrl();
+	}
+	// 得到事件处理器类
+	public AbstractEventHandler createEventHandler() {
+		return new ClientEventHandler(this, this.getUIControl());
+	}
+	
+	@Override
+	public boolean beforeEdit(BillEditEvent e) {
+		if(e.getTableCode().equals(Model2)&&e.getKey().equals("preferential")){
+			Object isdeal = getBillCardPanel().getHeadItem("accounty").getValueObject();
+			if(isdeal!=null){
+				boolean flag= Boolean.valueOf(isdeal.toString());
+				if(flag){
+					showErrorMessage("已计算过的明细不允许再次修改优惠单价！");
+					return false;
+				}
+			}
+			
+		}
+		return true;
+	}
+	
+	@Override
+	public void afterEdit(BillEditEvent e) {
+		super.afterEdit_yh(e);
+		if(e.getKey().equals("specialyhjg")){
+			int rowcount = getModelByName(Model2).getRowCount();
+			if(rowcount<=0){getBillCardPanel().getHeadItem("specialyhjg").setValue(null);return;};
+			Object value = getBillCardPanel().getHeadItem("specialyhjg").getValueObject();
+			UFDouble specialyhjg = value==null?new UFDouble(0.00):new UFDouble(value.toString());
+			String sql_pk_upper_b=" select max(pk_upper_b) pk_upper_b from jyglgt_balancelist_b where  vdef19='"+_getOperator()+"' group by poundcode,pk_measure_b";
+			ArrayList<HashMap<String,String>> list_pk_upper_b;
+			try {
+				list_pk_upper_b = Proxy.getItf().queryArrayBySql(sql_pk_upper_b);
+				A :for(int i=0;i<rowcount;i++){
+					String pk_upper_b=getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b")==null?"":getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b").toString();
+					if(list_pk_upper_b!=null&&list_pk_upper_b.size()>0){
+						for(HashMap<String,String> map_pk_upper_b:list_pk_upper_b){
+							if(map_pk_upper_b.get("pk_upper_b")!=null&&map_pk_upper_b.get("pk_upper_b").equals(pk_upper_b)){
+								setbodyValueByModel(Model2, specialyhjg, i, "preferential");
+								String[] formulas = new String[]{"preferentialmny->tonumber(preferential)*tonumber(weight)"};
+								getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);
+								continue A;
+							}
+						}
+					}
+					setbodyValueByModel(Model2, new UFDouble(0), i, "preferential");
+					String[] formulas = new String[]{"preferentialmny->tonumber(preferential)*tonumber(weight)"};
+					getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);
+				}
+			} catch (BusinessException e2) {
+				e2.printStackTrace();
+			}
+			delBalanceListTemp();
+			ClientEventHandler  ceh=(ClientEventHandler)createEventHandler();
+			AggregatedValueObject avo=ceh.getAVO();
+			ExAggSellPaymentJSVO iexaggvo = (ExAggSellPaymentJSVO)avo;
+	        BalanceListBVO[] tempvo=(BalanceListBVO[])iexaggvo.getTableVO(Model2);
+			try {
+				BalanceListBVO[] tempvo2=new BalanceListBVO[tempvo.length];
+				for(int i=0;i<tempvo.length;i++){
+					tempvo2[i]=tempvo[i];
+					tempvo2[i].setVdef19(_getOperator());//临时插入标记
+				}
+				Proxy.getItf().insertVOsArr(tempvo2);
+			} catch (BusinessException e1) {
+				e1.printStackTrace();
+			}
+		}else if(e.getKey().equals("vdef1")){
+			int rowcount = getModelByName(Model2).getRowCount();
+			if(rowcount<=0){getBillCardPanel().getHeadItem("vdef1").setValue(null);return;};
+			Object value = getBillCardPanel().getHeadItem("vdef1").getValueObject();
+			UFDouble specialyhjg = value==null?new UFDouble(0.00):new UFDouble(value.toString());
+			UFDouble totalyhmny=value==null?new UFDouble(0.00):new UFDouble(value.toString());
+			UFDouble tempmny=new UFDouble(0);
+			UFDouble totalweight=new UFDouble(0);
+//			if(rowcount>0){specialyhjg=specialyhjg.div(rowcount);}	
+			String sql_pk_upper_b=" select max(pk_upper_b) pk_upper_b from jyglgt_balancelist_b where  vdef19='"+_getOperator()+"' group by poundcode,pk_measure_b";
+			ArrayList<HashMap<String,String>> list_pk_upper_b;
+			try {
+				list_pk_upper_b = Proxy.getItf().queryArrayBySql(sql_pk_upper_b);
+				A:for(int i=0;i<rowcount;i++){
+					String pk_upper_b=getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b")==null?"":getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b").toString();
+					if(list_pk_upper_b!=null&&list_pk_upper_b.size()>0){
+						for(HashMap<String,String> map_pk_upper_b:list_pk_upper_b){
+							if(map_pk_upper_b.get("pk_upper_b")!=null&&map_pk_upper_b.get("pk_upper_b").equals(pk_upper_b)){
+								UFDouble weight=getBillCardPanel().getBillModel(Model2).getValueAt(i, "weight")==null?new UFDouble(0):new UFDouble(getBillCardPanel().getBillModel(Model2).getValueAt(i, "weight").toString()); 
+								totalweight = totalweight.add(weight);
+								continue A;
+						 }
+						}
+					}
+				}
+				int count_pk_upper_b=0;
+				A:for(int i=0;i<rowcount;i++){
+					String pk_upper_b=getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b")==null?"":getBillCardPanel().getBillModel(Model2).getValueAt(i, "pk_upper_b").toString();
+					if(list_pk_upper_b!=null&&list_pk_upper_b.size()>0){
+						for(HashMap<String,String> map_pk_upper_b:list_pk_upper_b){
+							if(map_pk_upper_b.get("pk_upper_b")!=null&&map_pk_upper_b.get("pk_upper_b").equals(pk_upper_b)){
+								if(count_pk_upper_b==(list_pk_upper_b.size()-1)){
+									specialyhjg=totalyhmny.sub(tempmny);
+									setbodyValueByModel(Model2, specialyhjg, i, "preferentialmny");
+									String[] formulas = new String[]{"preferential->tonumber(preferentialmny)/tonumber(weight)"};
+									getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);				                    
+									continue A;
+								}
+								count_pk_upper_b++;
+								UFDouble weight=getBillCardPanel().getBillModel(Model2).getValueAt(i, "weight")==null?new UFDouble(0):new UFDouble(getBillCardPanel().getBillModel(Model2).getValueAt(i, "weight").toString()); 
+								UFDouble yhmny=new UFDouble(specialyhjg.multiply(weight.div(totalweight)).doubleValue(),2);
+								setbodyValueByModel(Model2, yhmny, i, "preferentialmny");
+								String[] formulas = new String[]{"preferential->tonumber(preferentialmny)/tonumber(weight)"};
+								getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);
+								UFDouble preferential=getBillCardPanel().getBillModel(Model2).getValueAt(i, "preferential")==null?new UFDouble(0):new UFDouble(getBillCardPanel().getBillModel(Model2).getValueAt(i, "preferential").toString(),4);
+					             String inStr = String.valueOf(preferential);
+					              if(inStr.indexOf(".")>0){
+					                  int bz = inStr.indexOf(".")+5; 
+					                  inStr=inStr.substring(0, bz);                  
+					              }
+					              preferential = new UFDouble(inStr);
+								UFDouble preferentialmny=new UFDouble(preferential.multiply(weight).doubleValue(),2);
+								getBillCardPanel().getBillModel(Model2).setValueAt(preferential, i, "preferential");
+								getBillCardPanel().getBillModel(Model2).setValueAt(preferentialmny, i, "preferentialmny");
+								tempmny=tempmny.add(preferentialmny);
+								continue A;
+						 }
+						}
+//						if(i==(rowcount-1)){
+//							specialyhjg=totalyhmny.sub(tempmny);
+//							setbodyValueByModel(Model2, specialyhjg, i, "preferentialmny");
+//							String[] formulas = new String[]{"preferential->tonumber(preferentialmny)/tonumber(weight)"};
+//							getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);
+//		                    break;
+//						};
+					}
+					setbodyValueByModel(Model2, new UFDouble(0), i, "preferential");
+					String[] formulas = new String[]{"preferentialmny->tonumber(preferential)*tonumber(weight)"};
+					getBillCardPanel().getBillModel(Model2).execFormula(i,formulas);
+				}
+			} catch (BusinessException e2) {
+				e2.printStackTrace();
+			}
+			delBalanceListTemp();
+			ClientEventHandler  ceh=(ClientEventHandler)createEventHandler();
+			AggregatedValueObject avo=ceh.getAVO();
+	        ExAggSellPaymentJSVO iexaggvo = (ExAggSellPaymentJSVO)avo;
+	        BalanceListBVO[] tempvo=(BalanceListBVO[])iexaggvo.getTableVO(Model2);
+			try {
+				BalanceListBVO[] tempvo2=new BalanceListBVO[tempvo.length];
+				for(int i=0;i<tempvo.length;i++){
+					tempvo2[i]=tempvo[i];
+					tempvo2[i].setVdef19(_getOperator());//临时插入标记
+				}
+				Proxy.getItf().insertVOsArr(tempvo2);
+			} catch (BusinessException e1) {
+				e1.printStackTrace();
+			}
+		}
+	}
+	
+	private void delBalanceListTemp(){
+		int rowcount = getModelByName(Model2).getRowCount();
+		if(rowcount>0){
+			String sql = " delete from  jyglgt_balancelist_b where vdef19='"+_getOperator()+"' " ;
+			try {
+				Proxy.getItf().updateBYsql(sql);
+			} catch (BusinessException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+}

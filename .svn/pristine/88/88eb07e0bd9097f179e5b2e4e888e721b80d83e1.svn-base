@@ -1,0 +1,43 @@
+package nc.ui.jyglgt.j400675; 
+  
+import nc.ui.jyglgt.billmanage.AbstractCtrl; 
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillType; 
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtConst; 
+import nc.vo.trade.pub.HYBillVO; 
+import nc.vo.jyglgt.button.IJyglgtButton; 
+import nc.vo.jyglgt.button.ButtonTool; 
+  
+/** 
+ * 名称: 调拨价格政策CTRL类 
+*/ 
+public class ClientCtrl extends AbstractCtrl { 
+  
+ 	public String getBillType() { 
+ 		return IJyglgtBillType.JY03; 
+ 	} 
+  
+ 	public String[] getBillVoName() { 
+ 		return new String[] {  
+ 				HYBillVO.class.getName(), 
+ 				nc.vo.jyglgt.j400670.PricePolicyVO.class.getName(), 
+ 				nc.vo.jyglgt.j400670.PricePolicybVO.class.getName()}; 
+ 	} 
+  
+ 	public int[] getCardButtonAry() { 
+ 		return ButtonTool.insertButtons(new int[]{IJyglgtButton.BTN_COMMIT,IJyglgtButton.BTN_PASS,IJyglgtButton.BTN_UNPASS}, IJyglgtConst.CARD_BUTTONS_M, 7);
+ 	} 
+  
+ 	public int[] getListButtonAry() { 
+ 		return IJyglgtConst.LIST_BUTTONS_M; 
+ 	} 
+  
+ 	public String getPkField() { 
+ 		return "pk_pricepolicy"; 
+ 	} 
+  
+ 	@Override 
+ 	public String getChildPkField() { 
+ 		return "pk_pricepolicy_b"; 
+ 	} 
+  
+} 

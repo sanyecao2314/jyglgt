@@ -1,0 +1,61 @@
+package nc.vo.jyglgt.pub.Toolkits;
+
+
+import nc.ui.trade.button.IBillButton;
+/**
+ * 说明:基础常量
+ * @author 公共开发者
+ * 2012-1-5 12:50:51
+ */
+public interface IJyglgtConst {
+	/** 标准树卡片界面按钮*/
+	public int[] TREECARD_BUTTONS={IBillButton.Add,IBillButton.Edit,IBillButton.Delete,IBillButton.Save,
+			IBillButton.Cancel,IBillButton.Refresh};
+	/** 标准树列表界面按钮*/
+	public int[]TREELIST_BUTTONS={IBillButton.Add,IBillButton.Edit,IBillButton.Delete,
+            IBillButton.Refresh,   };
+    /** 标准列表界面按钮     */
+    public int[] LIST_BUTTONS={ IBillButton.Query, IBillButton.Add, IBillButton.Edit,IBillButton.Delete, 
+            IBillButton.Line, IBillButton.Save, IBillButton.Cancel,IBillButton.Refresh};
+    /** 标准管理列表按钮     */
+    public int[] LIST_BUTTONS_M={ IBillButton.Query, IBillButton.Add, IBillButton.Edit, IBillButton.Delete,
+            IBillButton.Card,IBillButton.Refresh };
+    /**  标准管理卡片按钮--彩生活     */
+    public int[] CARD_BUTTONS_M_CSH={ IBillButton.Brow,IBillButton.Add, IBillButton.Edit, IBillButton.Delete,
+            IBillButton.Line, IBillButton.Save, IBillButton.Cancel,IBillButton.Return,IBillButton.Refresh,IBillButton.Print 
+            };   
+    /**  标准管理卡片按钮     */
+    public int[] CARD_BUTTONS_M={ IBillButton.Brow,IBillButton.Add, IBillButton.Edit, IBillButton.Delete,
+            IBillButton.Line, IBillButton.Save, IBillButton.Cancel,IBillButton.Return,IBillButton.Refresh,IBillButton.Print 
+            };  
+    /**==============收款类型============================**/
+	
+//	/**收款类型-收款**/
+//    public static final String RECEIVETYPE_SK = "0";	
+//	/**收款类型-订金**/
+//    public static final String RECEIVETYPE_DJ = "1";
+//	/**收款类型-退款**/
+//    public static final String RECEIVETYPE_TK = "2";  
+//    /**收款类型-期初**/
+//    public static final String RECEIVETYPE_QC = "3";
+//    /**收款类型-赊销**/
+//    public static final String RECEIVETYPE_SX = "4";
+//    /**收款类型-弥补**/
+//    public static final String RECEIVETYPE_MB = "5";
+
+	  /**收款类型-预收**/
+	  public static final String RECEIVETYPE_YS = "0";
+	  /**收款类型-现款**/
+	  public static final String RECEIVETYPE_XK = "1";  
+	  /**收款类型-冲款**/
+	  public static final String RECEIVETYPE_CK = "2";
+	  /**收款类型-期初**/
+	  public static final String RECEIVETYPE_QC = "3";
+	  /**收款类型-赊欠**/
+	  public static final String RECEIVETYPE_SX = "4";
+	  /**收款类型-其他**/
+	  public static final String RECEIVETYPE_QT = "5";
+	  /**收款类型-优惠**/
+	  public static final String RECEIVETYPE_YH = "6";
+
+}

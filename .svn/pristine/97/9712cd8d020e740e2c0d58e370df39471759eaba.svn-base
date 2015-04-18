@@ -1,0 +1,79 @@
+package nc.vo.jyglgt.button;
+
+import nc.ui.trade.button.IBillButton;
+
+/**
+ * 说明: 按钮常量
+ * 
+ * @author 公共开发者 2012-1-5 上午12:55:59
+ */
+public interface IJyglgtButton extends IBillButton {
+	/** 附件 */
+	public int BTN_RESOURCE = 202;
+	/** 导入 **/
+	public int BTN_IMPORT = 204;
+	/** 导出 **/
+	public int BTN_EXPORT = 205;
+	/** 提交 **/
+	public int BTN_COMMIT = 230;
+	/** 审核 **/
+	public int BTN_PASS = 231;
+	/** 弃审 **/
+	public int BTN_UNPASS = 232;
+	/** 发邮件 **/
+	public int BTN_DOMAIL = 233;
+	/** 分配 **/
+	public int BTN_DISTRIBUTION = 234;	
+	/** 辅助查询 **/
+	public int BTN_LINKQU = 300;
+	/** 生产结构 **/
+	public int BTN_PSSTRUCT = 301;
+	/** 昨日排产 **/
+	public int BTN_LASRPC = 302;
+	/** 自动排产 **/
+	public int BTN_AUTOPC = 303;
+	/** 包装汇总 **/
+	public int BTN_BZHZ = 304;
+	/** 修订 **/
+	public int BTN_XIUDING = 305;
+	/** 确认**/
+	public int BTN_CONFIRM = 306;
+	/** 计划制定**/
+	public int BTN_PLAN = 307;
+	/** 计划同步**/
+	public int BTN_SYNCHRO = 308;
+	/** 取消确认**/
+	public int BTN_CANCELCONFIRM = 309;
+	/** 审批功能**/
+	public int BTN_CHECKFUN = 310;
+	/** 时间调整 **/
+	public int BTN_TIMECHANGE = 311;
+	/** 提取U8数据 **/
+	public int BTN_FATCHU8DATA = 312;
+	/** 自制**/
+	public int BTN_HOMEMADE = 313;
+	/** 取数**/
+	public int BTN_TAKEDATA = 314;
+	/** 指标判定 **/
+	public int BTN_INDEXJUDGE = 315;
+	/** 取分析单数据 **/
+	public int BTN_TAKEADDBILLDATA = 316;
+	/** 取日计划数据 **/
+	public int BTN_TAKEDPDATA = 317;
+	/** 自动调整按钮 **/
+	public int BTN_AUTOADJUST = 318;
+	/** 计算 **/
+	public int BTN_CALCULATE = 319;
+	/** 取生产结构 **/
+	public int BTN_SCJG = 320;
+	/** 参数 **/
+	public int BTN_PARAM = 321;
+	/**按上月*/
+	public int BTN_LMON = 322;
+	/**按频率*/
+	public int BTN_FREQ = 323;
+	/**调整*/
+	public int BTN_ADJUST = 324;
+	/**选择未排单品*/
+	public int BTN_CHOOSENOTINV = 325;
+}

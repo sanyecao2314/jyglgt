@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="jyglgt">
+  <public>
+      <component priority="0" singleton="false"  remote="true" tx="CMT" supportAlias="true">
+      <interface>nc.itf.jyglgt.pub.IJyglgtItf</interface>
+      <implementation>nc.bs.jyglgt.impl.IJyglgtImpl</implementation>
+      </component>
+  </public>
+<private />
+</module>

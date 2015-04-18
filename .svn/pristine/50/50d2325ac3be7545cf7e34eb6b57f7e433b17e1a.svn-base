@@ -1,0 +1,135 @@
+/*==============================================================*/
+/* Table: jyglgt_pricediscount                                  */
+/*==============================================================*/
+create table jyglgt_pricediscount 
+(
+   pk_pricediscount     CHAR(20)             not null,
+   distype              VARCHAR2(50),
+   custname             VARCHAR2(100),
+   pk_customer          CHAR(20),
+   disprice             NUMBER(20,8),
+   disreason            VARCHAR2(300),
+   billtype             CHAR(4),
+   pk_saleorder         CHAR(20),
+   pk_busitype          CHAR(20),
+   vbillcode            VARCHAR2(50),
+   pk_dept              CHAR(20),
+   commitmanid          CHAR(20),
+   dbilldate            CHAR(10),
+   vbillstatus          SMALLINT,
+   pk_operator          CHAR(20),
+   dmakedate            CHAR(10),
+   tmaketime            CHAR(19),
+   vapproveid           CHAR(20),
+   dapprovedate         CHAR(10),
+   vapprovenote         varchar2(500),
+   vapprovetime         CHAR(19),
+   vapprovednote        VARCHAR2(200),
+   vunapproveid         CHAR(20),
+   vunapprovedate       CHAR(10),
+   vunapprovetime       CHAR(19),
+   vunapprovednote      VARCHAR2(200),
+   modifyid             CHAR(20),
+   modifydate           CHAR(10),
+   tmodifytime          CHAR(19),
+   vmemo                VARCHAR2(300),
+   ts                   CHAR(19),
+   dr                   SMALLINT,
+   pk_corp              CHAR(20),
+   vdef1                NUMBER(20,8),
+   vdef2                NUMBER(20,8),
+   vdef3                NUMBER(20,8),
+   vdef4                NUMBER(20,8),
+   vdef5                NUMBER(20,8),
+   vdef6                VARCHAR2(300),
+   vdef7                VARCHAR2(300),
+   vdef8                VARCHAR2(300),
+   vdef9                VARCHAR2(300),
+   vdef10               VARCHAR2(300),
+   vdef11               VARCHAR2(300),
+   vdef12               VARCHAR2(300),
+   vdef13               VARCHAR2(300),
+   vdef14               VARCHAR2(300),
+   vdef15               VARCHAR2(300),
+   vdef16               VARCHAR2(300),
+   vdef17               VARCHAR2(300),
+   vdef18               VARCHAR2(300),
+   vdef19               VARCHAR2(300),
+   vdef20               VARCHAR2(300),
+   vdef21               VARCHAR2(300),
+   vdef22               VARCHAR2(300),
+   vdef23               VARCHAR2(300),
+   vdef24               VARCHAR2(300),
+   vdef25               VARCHAR2(300),
+   vdef26               VARCHAR2(300),
+   vdef27               VARCHAR2(300),
+   vdef28               VARCHAR2(300),
+   vdef29               VARCHAR2(300),
+   vdef30               VARCHAR2(300),
+   constraint PK_JYGLGT_PRICEDISCOUNT primary key (pk_pricediscount)
+);
+/*==============================================================*/
+/* Table: jyglgt_pricediscount_b                                */
+/*==============================================================*/
+create table jyglgt_pricediscount_b 
+(
+   pk_pricediscount_b   CHAR(20)             not null,
+   pk_pricediscount     CHAR(20),
+   pk_invbasdoc         varchar(20),
+   pk_invmandoc         varchar(20),
+   vfree1               varCHAR(100),
+   vfree3               varCHAR(100),
+   vfree2               varCHAR(100),
+   pk_quality           varchar(20),
+   pk_order_b           CHAR(20),
+   ddprice              NUMBER(20,8),
+   disprice             NUMBER(20,8),
+   vmemo                VARCHAR2(300),
+   ts                   CHAR(19),
+   dr                   SMALLINT,
+   pk_corp              CHAR(20),
+   vdef1                NUMBER(20,8),
+   vdef2                NUMBER(20,8),
+   vdef3                NUMBER(20,8),
+   vdef4                NUMBER(20,8),
+   vdef5                NUMBER(20,8),
+   vdef6                VARCHAR2(300),
+   vdef7                VARCHAR2(300),
+   vdef8                VARCHAR2(300),
+   vdef9                VARCHAR2(300),
+   vdef10               VARCHAR2(300),
+   vdef11               VARCHAR2(300),
+   vdef12               VARCHAR2(300),
+   vdef13               VARCHAR2(300),
+   vdef14               VARCHAR2(300),
+   vdef15               VARCHAR2(300),
+   vdef16               VARCHAR2(300),
+   vdef17               VARCHAR2(300),
+   vdef18               VARCHAR2(300),
+   vdef19               VARCHAR2(300),
+   vdef20               VARCHAR2(300),
+   vdef21               VARCHAR2(300),
+   vdef22               VARCHAR2(300),
+   vdef23               VARCHAR2(300),
+   vdef24               VARCHAR2(300),
+   vdef25               VARCHAR2(300),
+   vdef26               VARCHAR2(300),
+   vdef27               VARCHAR2(300),
+   vdef28               VARCHAR2(300),
+   vdef29               VARCHAR2(300),
+   vdef30               VARCHAR2(300),
+   constraint PK_JYGLGT_PRICEDISCOUNT_B primary key (pk_pricediscount_b)
+);
+
+insert into pub_busiclass (ACTIONTYPE, CLASSNAME, DR, ISBEFORE, PK_BILLTYPE, PK_BUSICLASS, PK_BUSINESSTYPE, PK_CORP, TS)
+values ('SAVE', 'N_JY05_SAVE', 0, 'N', 'JY05', 'FBM_JY05_SAVE100101 ', '', '', '2007-08-31 15:40:43');
+
+insert into pub_busiclass (ACTIONTYPE, CLASSNAME, DR, ISBEFORE, PK_BILLTYPE, PK_BUSICLASS, PK_BUSINESSTYPE, PK_CORP, TS)
+values ('APPROVE', 'N_JY05_APPROVE', 0, 'N', 'JY05', 'SYSTEMJY05W000000003', '', '', '2008-02-16 15:51:12');
+
+insert into pub_busiclass (ACTIONTYPE, CLASSNAME, DR, ISBEFORE, PK_BILLTYPE, PK_BUSICLASS, PK_BUSINESSTYPE, PK_CORP, TS)
+values ('UNAPPROVE', 'N_JY05_UNAPPROVE', 0, 'N', 'JY05', 'SYSTEMJY05W000000004', '', '', '2014-10-10 15:51:12');
+
+insert into pub_votable (APPROVEID, BILLID, BILLNO, BILLVO, BUSITYPE, DEF1, DEF2, DEF3, DR, HEADBODYFLAG, HEADITEMVO, ITEMCODE, OPERATOR, PK_BILLTYPE, PK_CORP, PK_VOTABLE, PKFIELD, TS, VOTABLE)
+values ('vapproveid', 'pk_pricediscount', 'vbillcode', 'nc.vo.trade.pub.HYBillVO', 'pk_busitype', 'JY05', '', '', null, 'Y', 'nc.vo.jyglgt.j40068b.PricediscountVO', '', 'pk_operator', 'JY05', '', '1007AA100000000024EB', 'pk_pricediscount', '2014-10-05 19:33:55', 'jyglgt_pricediscount');
+

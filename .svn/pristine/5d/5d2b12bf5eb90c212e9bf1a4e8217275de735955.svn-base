@@ -1,0 +1,288 @@
+package nc.ui.jyglgt.j40068d;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import nc.pub.jyglgt.proxy.Proxy;
+import nc.ui.pub.beans.MessageDialog;
+import nc.ui.pub.beans.UIDialog;
+import nc.ui.pub.bill.BillModel;
+import nc.ui.pub.pf.PfUtilClient;
+import nc.ui.trade.base.IBillOperate;
+import nc.ui.trade.bill.ISingleController;
+import nc.ui.trade.controller.IControllerBase;
+import nc.ui.trade.manage.BillManageUI;
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillType;
+import nc.vo.jyglgt.pub.Toolkits.Toolkits;
+import nc.vo.pub.AggregatedValueObject;
+import nc.vo.pub.BusinessException;
+import nc.vo.pub.lang.UFBoolean;
+import nc.vo.pub.lang.UFDouble;
+
+
+
+/**
+ * @功能：优惠结算
+ */
+public class ClientEventHandler extends nc.ui.jyglgt.j40068c.ClientEventHandler {
+
+
+	public ClientEventHandler(BillManageUI arg0, IControllerBase arg1) {
+		super(arg0, arg1);
+
+	}
+	
+	
+	
+	
+	protected void onBoCancel() throws Exception {
+		delBalanceListTemp();
+		super.onBoCancel_yh();
+	}
+	
+	/**
+	 * 功能说明：计算按钮
+	 * @author 施鹏
+	 * @throws BusinessException 
+	 * @time 2011-7-6
+	 * */
+	@SuppressWarnings("unchecked")
+	protected void onBoCount() throws BusinessException {
+		int rowcount = getModelByName(Model2).getRowCount();
+		Object isdeal = getBillCardPanelWrapper().getBillCardPanel().getHeadItem("accounty").getValueObject();
+		if(isdeal!=null){
+			boolean flag= Boolean.valueOf(isdeal.toString());
+			if(flag){
+				showErrorMessage("不可重复计算！");
+				return;
+			}
+		}
+		if(rowcount<=0){
+			showErrorMessage("销售明细无数据,无法计算,请先检索明细!");
+			return;
+		}
+		for(int i=0;i<rowcount;i++){
+			String preferential = getString(getbodyValueByModel(Model2, i, "preferential"));
+			if(Toolkits.isEmpty(preferential)){
+				showErrorMessage("第"+(i+1)+"行,优惠单价为空,请输入后,再计算!");
+				return;
+			}
+		}
+		
+//		//从第二个页签汇总数据
+//		secondToFirst(rowcount);
+		//从临时表里面查询出汇总数据
+		StringBuffer sb = new StringBuffer();
+		sb.append("select pk_invmandoc,pk_invbasdoc,vfree1,vfree2,vfree3,vfree4,vfree5,dj,pk_receiveway,")
+		 .append(" sum(num)num,sum(fnum)fnum,sum(jsmny) jsmny,sum(yhmny)yhmny  ")
+		 .append(" from ")
+		 .append(" (select pk_measure_b,pk_invmandoc,pk_invbasdoc,vfree1,vfree2,vfree3,vfree4,null vfree5,vdef11 dj,null pk_receiveway,")
+		 .append(" nvl(twonum,0) num, nvl(num,0)fnum,sum(nvl(balancemny,0))-nvl(vdef1,0) jsmny,sum(nvl(preferentialmny,0)) yhmny")  
+		 .append(" from jyglgt_balancelist_b ")
+		 .append("  where nvl(dr,0)=0 and vdef19='"+_getOperator()+"'")// in("+pk_balanceListTemps+")") 
+		 .append("  group by pk_measure_b,pk_invmandoc,pk_invbasdoc,vfree1,vfree2,vfree3,vfree4,vdef1,vdef11 ,twonum,num")
+		 .append(" )a") 
+		 .append("  group by  pk_invmandoc,pk_invbasdoc,vfree1,vfree2,vfree3,vfree4,vfree5, dj,pk_receiveway");
+		ArrayList<HashMap<String,String>> al = (ArrayList<HashMap<String,String>>)Proxy.getItf().queryArrayBySql(sb.toString());
+		if(al!=null&&al.size()>0){
+			for(int i=0;i<al.size();i++){
+				HashMap<String,String> hm = (HashMap<String,String>) al.get(i);
+				HashMap<String,UFDouble>hm_ufd=new HashMap<String,UFDouble>();//保留精度三位计重
+				HashMap<String,UFDouble>hm_ufd2=new HashMap<String,UFDouble>();//保留原精度计重
+				String pk_measure_b=hm.get("pk_measure_b")==null?"":hm.get("pk_measure_b");
+				String pk_receiveway=hm.get("pk_receiveway")==null?"":hm.get("pk_receiveway");
+				String key = pk_measure_b+pk_receiveway;
+				UFDouble num=hm.get("num")==null?new UFDouble(0):new UFDouble(String.valueOf(hm.get("num")));
+				UFDouble ynum=hm.get("ynum")==null?new UFDouble(0):new UFDouble(String.valueOf(hm.get("ynum")));
+				UFDouble num_3=new UFDouble(num.doubleValue(),3);//三位精度计重
+				if(!hm.containsKey(key)){
+					hm_ufd.put(key, num_3);
+					hm_ufd2.put(key, num);
+					num=num_3;
+				}else{
+					UFDouble totalnum = hm_ufd.get(key);
+					UFDouble totalnum2 = hm_ufd.get(key);
+					totalnum2=totalnum2.add(num);
+					if(new UFDouble(totalnum2.doubleValue(),3).sub(new UFDouble(ynum.doubleValue(),3)).doubleValue()==0){
+						num=ynum.sub(totalnum);
+					}else{
+						totalnum=totalnum.add(num_3);
+						num=num_3;
+					}
+				}
+				UFDouble fnum=hm.get("fnum")==null?new UFDouble(0):new UFDouble(String.valueOf(hm.get("fnum")));
+				UFDouble jsmny=hm.get("jsmny")==null?new UFDouble(0):new UFDouble(String.valueOf(hm.get("jsmny")),2);
+				UFDouble yhmny=hm.get("yhmny")==null?new UFDouble(0):new UFDouble(String.valueOf(hm.get("yhmny")),2);
+				UFDouble yhprice=new UFDouble(yhmny.div(num).doubleValue(),4);
+				UFDouble jsprice=num.doubleValue()==0?new UFDouble(0):jsmny.div(num);
+				getModelByName(Model1).addLine();
+				setbodyValueByModel(Model1, pk_measure_b, i, "vdef12");
+				setbodyValueByModel(Model1, hm.get("pk_invmandoc"), i, "pk_invmandoc");
+				setbodyValueByModel(Model1, hm.get("pk_invbasdoc"), i, "pk_invbasdoc");
+				setbodyValueByModel(Model1, hm.get("vfree1"), i, "vfree1");
+				setbodyValueByModel(Model1, hm.get("vfree2"), i, "vfree2");
+				setbodyValueByModel(Model1, hm.get("vfree3"), i, "vfree3");
+				setbodyValueByModel(Model1, hm.get("vfree4"), i, "vfree4");
+				setbodyValueByModel(Model1, hm.get("vfree5"), i, "vfree5");
+				setbodyValueByModel(Model1, hm.get("dj"), i, "vdef11");		
+				setbodyValueByModel(Model1, pk_receiveway, i, "vdef13");	//收款方式
+				setbodyValueByModel(Model1, num, i, "suttle");
+				setbodyValueByModel(Model1, fnum, i, "num");
+				setbodyValueByModel(Model1, jsprice, i, "price");
+				setbodyValueByModel(Model1, yhprice, i, "preferentialprice");
+				setbodyValueByModel(Model1, jsmny, i, "moneys"); 
+				setbodyValueByModel(Model1, yhmny, i, "preferentialmny");
+				setbodyValueByModel(Model1, _getCorp().getPk_corp(), i, "pk_corp");
+				setbodyValueByModel(Model1, new Integer(0), i, "dr");
+				execAllBodyEditFormulas(Model1,i);
+			}
+		}
+		//设为已计算
+		getBillCardPanelWrapper().getBillCardPanel().getHeadItem("accounty").setValue(new UFBoolean(true));
+		//表头特殊优惠
+		getBillCardPanelWrapper().getBillCardPanel().getHeadItem("specialyhjg").setEnabled(false);
+		getBillCardPanelWrapper().getBillCardPanel().getHeadItem("vdef1").setEnabled(false);
+		getBillUI().showHintMessage("计算完成");
+	}
+
+
+
+	public AggregatedValueObject getAVO(){
+		AggregatedValueObject avo=null;
+		try {
+			avo= getBillCardPanelWrapper().getBillVOFromUI();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return avo;
+	}
+	@Override
+	protected void onBoSave() throws Exception {
+		int row1 = getModelByName(Model1).getRowCount();
+		int row2 = getModelByName(Model2).getRowCount();
+		if(row1<=0){
+			showErrorMessage("结算信息为空,不能保存!请计算!");
+			return;
+		}
+		if(row2<=0){
+			showErrorMessage("结算明细为空,不有保存!请检索明细!");
+			return;
+		}
+		Object isdeal = getBillCardPanelWrapper().getBillCardPanel().getHeadItem("accounty").getValueObject();
+		if(isdeal==null){
+			showErrorMessage("还没计算过,不能保存！");
+			return;
+		}
+		int rowcount = getModelByName(Model2).getRowCount();
+		for(int i=0;i<rowcount;i++){
+			UFDouble jsprice = (UFDouble) getbodyValueByModel(Model2, i, "balanceprice");
+			UFDouble yhprice = (UFDouble) getbodyValueByModel(Model2, i, "preferential");
+			if((yhprice.sub(jsprice)).doubleValue()>0){
+				showErrorMessage("优惠单价不能比结算单价大！");
+				return;
+			}
+		}
+        super.onBoSave();
+	}
+
+
+	/**
+	 * 返回查询条件
+	 * @author 施鹏
+	 * */
+	protected StringBuffer getWhere(){
+		StringBuffer sb=new StringBuffer();
+		sb.append(" ( billtype='"+IJyglgtBillType.JY07+"') and");
+		return sb;
+	}
+	
+
+	protected void onBoDelete() throws Exception {
+
+    	// 界面没有数据或者有数据但是没有选中任何行
+		if (getBufferData().getCurrentVO() == null)
+			return;
+
+		if (MessageDialog.showOkCancelDlg(getBillUI(),
+				nc.ui.ml.NCLangRes.getInstance().getStrByID("uifactory",
+						"UPPuifactory-000064")/* @res "档案删除" */,
+				nc.ui.ml.NCLangRes.getInstance().getStrByID("uifactory",
+						"UPPuifactory-000065")/* @res "是否确认删除该基本档案?" */
+				, MessageDialog.ID_CANCEL) != UIDialog.ID_OK)
+			return;
+	
+		AggregatedValueObject modelVo = getBufferData().getCurrentVO();
+		getBusinessAction().delete(modelVo, getUIController().getBillType(),
+				getBillUI()._getDate().toString(), getBillUI().getUserObject());
+		if (PfUtilClient.isSuccess()) {
+		
+			AggregatedValueObject avo=getBufferData().getCurrentVO();		
+			// 清除界面数据
+			getBillUI().removeListHeadData(getBufferData().getCurrentRow());
+			if (getUIController() instanceof ISingleController) {
+				ISingleController sctl = (ISingleController) getUIController();
+				if (!sctl.isSingleDetail())
+					getBufferData().removeCurrentRow();
+			} else {
+				getBufferData().removeCurrentRow();
+			}
+
+		}
+		if (getBufferData().getVOBufferSize() == 0)
+			getBillUI().setBillOperate(IBillOperate.OP_INIT);
+		else
+			getBillUI().setBillOperate(IBillOperate.OP_NOTEDIT);
+		getBufferData().setCurrentRow(getBufferData().getCurrentRow());
+    
+		
+	}
+	
+	private void delBalanceListTemp() throws BusinessException{
+//		int rowcount = getModelByName(Model2).getRowCount();
+//		if(rowcount>0){
+			String sql = " delete from  jyglgt_balancelist_b where vdef19='"+_getOperator()+"' " ;
+			Proxy.getItf().updateBYsql(sql);
+//		}
+	}
+	
+	protected void onBoLineDel() throws Exception {			
+		if(getBufferData()==null)return;
+		BillModel bm = getBillCardPanelWrapper().getBillCardPanel().getBillModel();
+		if(bm.equals(getModelByName(Model1))){
+			showErrorMessage("结算信息不允许删行!");
+			return;
+		}else{
+			Object isdeal = getBillCardPanelWrapper().getBillCardPanel().getHeadItem("accounty").getValueObject();
+			if(isdeal!=null){
+				boolean flag= Boolean.valueOf(isdeal.toString());
+				if(flag){
+					showErrorMessage("已计算过的明细不允许删行,请删除整张单据！");
+					return;
+				}
+			}
+			//删行时,要删除相同磅单号的所有记录
+			int[] rows = getBillCardPanelWrapper().getBillCardPanel().getBillTable(Model2).getSelectedRows();
+			int rowcount = getModelByName(Model2).getRowCount();
+			//必须用set过虑重复行记录
+			HashSet<Integer> set = new HashSet<Integer>();
+			for(int i=0;i<rows.length;i++){
+				String poundcode = (String) getbodyValueByModel(Model2, rows[i], "pk_measure_b");
+				for(int k=0;k<rowcount;k++){
+					String subpoundcode = (String) getbodyValueByModel(Model2, k, "pk_measure_b");
+					if(poundcode.equals(subpoundcode)){
+						set.add(k);
+					}
+				}
+			}
+			Integer[] dels = set.toArray(new Integer[set.size()]);
+			int[] delrows = new int[dels.length];
+			for(int i=0;i<dels.length;i++){
+				delrows[i] = dels[i];
+				String pk_measure_b = (String) getbodyValueByModel(Model2, delrows[i], "pk_measure_b");
+				String sql = " delete from  jyglgt_balancelist_b where vdef19='"+_getOperator()+"' and pk_measure_b='"+pk_measure_b+"'" ;
+				Proxy.getItf().updateBYsql(sql);
+			}
+			getModelByName(Model2).delLine(delrows);
+		}
+	}
+}

@@ -1,0 +1,72 @@
+package nc.bs.jyglgt.bfgldao;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import nc.bs.jyglgt.dao.ServerDAO;
+import nc.jdbc.framework.JdbcSession;
+import nc.jdbc.framework.PersistenceManager;
+import nc.jdbc.framework.exception.DbException;
+import nc.jdbc.framework.processor.MapListProcessor;
+import nc.vo.pub.BusinessException;
+
+
+/**
+ * @author 施鹏
+ * @功能： NC采购订单与系统自动化接口后台处理类
+ * 
+ */
+public class BfglToPoDAO extends ServerDAO {
+	public BfglToPoDAO() {
+		super();
+	}
+
+	PersistenceManager sManager = null;
+
+
+
+	
+	/**
+	 * 判断系统自动化收货通知是否存在
+	 * @throws BusinessException 
+	 * */
+	public boolean isExitByBfJLArriveNote(String datasource,String vbillcode,String bpk) throws BusinessException{		
+		try {
+			JdbcSession session = getsManager(datasource).getJdbcSession();
+			// 查询语句
+			StringBuffer sql=new StringBuffer();
+			sql.append(" select count(*) ")
+				.append(" from BFPCD ")
+				.append(" where BFPCD_SFBZ='2' and BFPCD_HTBH='"+vbillcode+"' "); 
+			if(bpk!=null){
+				sql.append(" and BFPCD_C7='"+bpk+"'");
+			}
+			
+			// 数据库访问操作
+			ArrayList<HashMap<String,Object>> al = (ArrayList<HashMap<String,Object>>) session.executeQuery(sql.toString(),
+					new MapListProcessor());
+            if(al!=null&&al.size()>0){
+               return true;	
+            }else{
+               return false;
+            }
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new BusinessException(e);
+		} finally {
+			if (sManager != null)
+				sManager.release();
+		}
+	}
+	
+
+
+    
+
+    private PersistenceManager getsManager(String datasource) throws DbException {
+		if (sManager == null)
+			sManager = PersistenceManager.getInstance(datasource);
+		return sManager;
+	}
+
+
+}

@@ -1,0 +1,24 @@
+package nc.ui.jyglgt.j400675; 
+ 
+import nc.ui.jyglgt.billmanage.AbstractEventHandler; 
+import nc.ui.trade.controller.IControllerBase; 
+import nc.ui.trade.manage.BillManageUI; 
+
+ 
+/** 
+
+ * 名称: 调拨价格政策EH类 
+*/ 
+public class ClientEventHandler extends AbstractEventHandler{ 
+	 
+	public ClientEventHandler(BillManageUI billUI, IControllerBase control) { 
+		super(billUI, control); 
+	} 
+
+	@Override
+	protected StringBuffer getWhere() {
+		StringBuffer sb = new StringBuffer();
+		sb.append(" billtype='"+getUIController().getBillType()+"' and ");
+		return sb;
+	}
+} 

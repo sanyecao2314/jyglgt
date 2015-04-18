@@ -1,0 +1,45 @@
+package nc.ui.jyglgt.j400670; 
+  
+import nc.ui.jyglgt.billmanage.AbstractCtrl; 
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillType; 
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtConst; 
+import nc.vo.trade.pub.HYBillVO; 
+import nc.vo.jyglgt.button.IJyglgtButton; 
+import nc.vo.jyglgt.button.ButtonTool; 
+import nc.ui.trade.bill.ISingleController;   
+  
+/** 
+ * @author 自动生成 
+ * 名称: 销售价格政策CTRL类 
+*/ 
+public class ClientCtrl extends AbstractCtrl { 
+  
+ 	public String getBillType() { 
+ 		return IJyglgtBillType.JY02; 
+ 	} 
+  
+ 	public String[] getBillVoName() { 
+ 		return new String[] {  
+ 				HYBillVO.class.getName(), 
+ 				nc.vo.jyglgt.j400670.PricepolicyVO.class.getName(), 
+ 				nc.vo.jyglgt.j400670.PricepolicybVO.class.getName()}; 
+ 	} 
+  
+ 	public int[] getCardButtonAry() { 
+ 		return IJyglgtConst.CARD_BUTTONS_M; 
+ 	} 
+  
+ 	public int[] getListButtonAry() { 
+ 		return IJyglgtConst.LIST_BUTTONS_M; 
+ 	} 
+  
+ 	public String getPkField() { 
+ 		return "pk_pricepolicy"; 
+ 	} 
+  
+ 	@Override 
+ 	public String getChildPkField() { 
+ 		return "pk_pricepolicy_b"; 
+ 	} 
+  
+} 

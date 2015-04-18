@@ -1,0 +1,1097 @@
+
+package nc.ui.jyglgt.billmanage;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import nc.bs.framework.common.NCLocator;
+import nc.itf.uap.IUAPQueryBS;
+import nc.itf.uap.pf.IWorkflowDefine;
+import nc.jdbc.framework.processor.BeanListProcessor;
+import nc.pub.jyglgt.proxy.Proxy;
+import nc.ui.jyglgt.pub.ClientToolKits;
+import nc.ui.jyglgt.pub.FileManagerDialog;
+import nc.ui.jyglgt.pub.FileManagerUtil;
+import nc.ui.pub.ButtonObject;
+import nc.ui.pub.ClientEnvironment;
+import nc.ui.pub.beans.UIDialog;
+import nc.ui.pub.bill.BillItem;
+import nc.ui.pub.bill.BillModel;
+import nc.ui.pub.billcodemanage.BillcodeRuleBO_Client;
+import nc.ui.trade.base.AbstractBillUI;
+import nc.ui.trade.button.IBillButton;
+import nc.ui.trade.controller.IControllerBase;
+import nc.ui.trade.manage.BillManageUI;
+import nc.ui.trade.manage.ManageEventHandler;
+import nc.vo.jyglgt.button.IJyglgtButton;
+import nc.vo.jyglgt.pub.Toolkits.IJyglgtBillStatus;
+import nc.vo.jyglgt.pub.Toolkits.Toolkits;
+import nc.vo.pub.AggregatedValueObject;
+import nc.vo.pub.BusinessException;
+import nc.vo.pub.SuperVO;
+import nc.vo.pub.ValidationException;
+import nc.vo.pub.lang.UFDate;
+import nc.vo.pub.lang.UFDouble;
+import nc.vo.pub.pf.IPFConfigInfo;
+import nc.vo.trade.pub.IExAggVO;
+import nc.vo.wfengine.definition.IApproveflowConst;
+import nc.vo.wfengine.definition.WorkflowDefinitionVO;
+
+/**
+ * 说明:基础事件处理类,一些常用方法已在此重写,管理型界面应继承此类
+ * @author 公共开发者 2012-1-5 14:22:47
+ */
+public class AbstractEventHandler extends ManageEventHandler {
+
+
+	@Override
+	protected void onBoCard() throws Exception {
+		super.onBoCard();
+	}
+
+
+	@Override
+	protected void onBoReturn() throws Exception {
+		super.onBoReturn();
+	}
+
+	protected void onBoBasReturn() throws Exception {
+		super.onBoReturn();
+	}
+	
+
+	public AbstractEventHandler(BillManageUI arg0, IControllerBase arg1) {
+		super(arg0, arg1);
+	}
+    
+
+	private static ClientEnvironment ce = ClientEnvironment.getInstance();
+	
+	@Override
+	protected void onBoElse(int intBtn) throws Exception {
+		super.onBoElse(intBtn);
+		if(intBtn==IJyglgtButton.BTN_EXPORT){
+			onboBTN_EXPOER();
+		}else if (intBtn == IJyglgtButton.BTN_PASS) {
+			onBoCheckPass();
+		}else if (intBtn == IJyglgtButton.BTN_UNPASS) {
+			onBoCheckNoPass();
+		}else if(intBtn==IJyglgtButton.BTN_RESOURCE){
+			onBoDocManage(getBillUI());
+		}else if(intBtn == IJyglgtButton.BTN_COMMIT){
+			onBoCommit();
+		}else if(intBtn == IJyglgtButton.BTN_CLOSE){
+			onBoClose();
+		}	
+	}
+	
+	
+	/**
+	 * 关闭
+	 * @throws Exception 
+	 * */
+	protected void onBoClose() throws Exception {
+		AggregatedValueObject avo = getBufferData().getCurrentVO();
+		if (avo == null)
+			return;
+		int result = getBillUI().showYesNoMessage("确定关闭吗?");
+		if (result == UIDialog.ID_YES) {
+			SuperVO vo = (SuperVO) avo.getParentVO();
+			// 关闭态
+			vo.setAttributeValue("vbillstatus", IJyglgtBillStatus.CLOSE);
+			// 关闭人
+			vo.setAttributeValue("pk_closer", _getOperator());
+			// 关闭时间
+			vo.setAttributeValue("closedate", _getDate());
+			try {
+				Proxy.getItf().updateVO(vo);
+			} catch (BusinessException e) {
+				e.printStackTrace();
+				showErrorMessage("关闭异常:" + e.getMessage());
+			}
+			getBufferData().updateView();
+		}
+	}
+	
+	/**
+	 * 自制方法
+	 * */
+	public void onBoAdd_Homemade(ButtonObject bo) throws Exception {
+		super.onBoAdd(bo);
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("pk_operator",  _getOperator());//制单人	
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("dmakedate",  _getDate());//制单日期
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("tmaketime",  ClientEnvironment.getServerTime());//制单时间
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("vbillstatus", IJyglgtBillStatus.FREE);// 单据状态
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("dbilldate", _getDate());// 单据日期
+	}
+	/**
+	 * 单据导出
+	 */
+	protected void onboBTN_EXPOER() {
+		try {
+			ClientToolKits.onBoExport((BillManageUI)getBillUI(), getBillUI().getTitle());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 向U8获取数据，进行相关处理，具体在子类重写
+	 * @author 施鹏
+	 * @time 2014-03-27
+	 * */
+	protected void onBoFatchU8Data(){
+		
+	}
+
+	@Override
+	protected void onBoCopy() throws Exception {
+		super.onBoCopy();
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("vbillcode", null);//单据号
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("dbilldate", _getDate());// 单据日期
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("vbillstatus", IJyglgtBillStatus.FREE);// 单据状态
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("dschdate", null);//排定日期
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("cmpflag", null);//是否同意
+		getBillCardPanelWrapper().getBillCardPanel().setHeadItem("ccusnote", null);//客户意见
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("pk_operator",  _getOperator());//制单人	
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("dmakedate",  _getDate());//制单日期
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("tmaketime",  ClientEnvironment.getServerTime());//制单时间
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("vapproveid", null);//审核人
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("dapprovedate", null);//审核日期
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("vapprovetime", null);//审核时间
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("vunapproveid" , null);// 弃审人
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("vunapprovedate", null);// 弃审日期
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("vunapprovetime", null);//弃审时间
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("modifyid", null);//修改人
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("modifydate", null);//修改日期
+		getBillCardPanelWrapper().getBillCardPanel().setTailItem("tmodifytime", null);//修改时间
+	}
+
+	protected void onBoCopybyEdit(String pk_bill) throws Exception {
+		onBoEdit();
+	}
+	
+	 /**
+     * 功能: 自定义审核按钮触发方法
+     * @return 
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+	public void onBoCheckPass() throws Exception {
+    	AggregatedValueObject avo=getBufferData().getCurrentVO();
+    	if(avo==null)return ;
+        int result=getBillUI().showYesNoMessage("确定此操作吗?");
+        if(result==UIDialog.ID_YES){
+	        SuperVO vo=(SuperVO) avo.getParentVO();
+			// 审核人
+	        vo.setAttributeValue("vapproveid" , _getOperator());
+			// 审核日期
+			vo.setAttributeValue("dapprovedate", _getDate());
+        	// 弃审人
+ 	        vo.setAttributeValue("vunapproveid" , null);
+ 			// 弃审日期
+ 			vo.setAttributeValue("vunapprovedate", null);
+			// 单据状态
+			vo.setAttributeValue("vbillstatus", IJyglgtBillStatus.CHECKPASS);
+			Proxy.getItf().updateVO(vo);
+	        getBufferData().updateView(); 
+	        super.onBoRefresh();
+        }
+	}
+	
+
+	 /**
+     * 功能: 自定义弃审按钮触发方法
+     * @return 
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+	public void onBoCheckNoPass() throws Exception {
+    	AggregatedValueObject avo=getBufferData().getCurrentVO();
+    	if(avo==null)return ;
+        int result=getBillUI().showYesNoMessage("确定此操作吗?");
+        if(result==UIDialog.ID_YES){
+	        SuperVO vo=(SuperVO) avo.getParentVO();
+	         String  vpid= (String) vo.getAttributeValue("vapproveid");
+//	         if(_getOperator().equals(vpid.trim())){//update by cm 2014-5-16  
+	        	String errmsg = beforeCheckNoPass(avo);
+	        	if(!Toolkits.isEmpty(errmsg)){
+	        		throw new BusinessException(errmsg);
+	        	}
+	        	// 弃审人
+	 	        vo.setAttributeValue("vunapproveid" , _getOperator());
+	 			// 弃审日期
+	 			vo.setAttributeValue("vunapprovedate", _getDate());
+	 			// 单据状态
+	 			vo.setAttributeValue("vbillstatus", IJyglgtBillStatus.FREE);
+				// 审核人
+		        vo.setAttributeValue("vapproveid" , "");
+				// 审核日期
+				vo.setAttributeValue("vapprovedate", null);
+				vo.setAttributeValue("dapprovedate", null);
+				Proxy.getItf().updateVO(vo);
+	 	        getBufferData().updateView(); 
+	 	        super.onBoRefresh();
+	 	        //update by cm 2014-5-16  
+//	         }else {
+//	        	 showErrorMessage("审核人与弃审人必须是同一个人！");
+//	         }
+			
+        }
+	}
+	
+
+	/**
+	 * @param avo
+	 * @return
+	 * 弃审前判断,是否能弃审,能返回空。不能返回错误信息
+	 * 子类可重写此方法
+	 */
+	protected String beforeCheckNoPass(AggregatedValueObject avo) throws BusinessException {
+		return "";
+	}
+
+
+	/**
+	 * 判断下游单据是否使用
+	 * @param String table  表
+	 * @param String column 字段
+	 * @param String value  值
+	 * @author 公共开发者
+	 * @serialData 2011-6-3
+	 * @return boolean
+	 * */
+	protected boolean isBillDown(String table,String column,String value){
+		boolean isDown=false;
+		String sql=" select "+column+"  from "+table+" where "+column+"='"+value+"' and nvl(dr,0)=0 and pk_corp='"+getBillUI()._getCorp().getPk_corp()+"'";
+		try {
+			String obj=Proxy.getItf().queryStrBySql(sql);
+			if(!Toolkits.isEmpty(obj)){isDown=true;}
+		} catch (BusinessException e) {
+			e.printStackTrace();
+		}
+		return isDown;
+	}
+	
+	 /**
+     * 功能: 对同一列前台重复行的校验
+     * @param column 字段
+     * @param rows  行数
+     * @return boolean
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+    protected boolean isPreRepeat(String column,int rows){
+        for(int i=0;i<rows-1;i++){
+            String preValue=getStr(i,column);
+            for(int j=i+1;j<rows;j++){
+                String curValue=getStr(j,column);                  
+                if(preValue.compareTo(curValue)==0){
+                	String key=getBillCardPanelWrapper().getBillCardPanel().getBodyItem(column).getName();
+                    showErrorMessage("第"+(j+1)+"行："+key+"："+curValue+" 重复！");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
+    
+    /**
+     * 功能: 返回字符串
+     * @param row 行号
+     * @param str 列字符
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+    protected String getStr(int row,String str){
+       return getBillCardPanelWrapper().getBillCardPanel().getBodyValueAt(row, str)==null?"":getBillCardPanelWrapper().getBillCardPanel().getBodyValueAt(row, str).toString();
+    }
+    
+    /**
+     * 功能: 显示出错信息
+     * @param errorMessage
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+    protected void showErrorMessage(String errorMessage){
+        getBillUI().showErrorMessage(errorMessage);
+        return;
+    }
+    
+    /**
+     * 功能:初始化UFDouble型数据
+     * * @author 公共开发者
+     * 2011-6-3 
+     */
+    protected void onBoLineAdd() throws Exception
+    {
+	
+        super.onBoLineAdd();
+        
+    }
+
+	@Override
+	protected void onBoSave() throws Exception {
+		checkSave();
+		super.onBoSave();
+		super.onBoRefresh();//多子表 又是走BD类型的需要 刷新下(否则 保存后马上操作 子表会没有主键)
+	}
+	
+	/**
+	 * 保存校样公共方法
+	 * @author 施鹏
+	 * @time 2014-03-23
+	 * */
+	protected void checkSave()throws Exception{
+        //保存时不允许为空
+        getBillCardPanelWrapper().getBillCardPanel().getBillData().dataNotNullValidate();
+		BillItem billcode=getBillCardPanelWrapper().getBillCardPanel().getHeadItem("vbillcode");
+		//保存时生成单据号
+		if(needBillNo()){
+	        String billNo = BillcodeRuleBO_Client.getBillCode(getUIController().getBillType(), getBillUI()._getCorp().getPk_corp(),
+			        null, null);
+            if(billcode!=null){
+				getBillCardPanelWrapper().getBillCardPanel().getHeadItem("vbillcode").setValue(billNo);
+			}
+		}
+	}
+
+	/**
+	 * 只获取父类共用保存方法
+	 * */
+	protected void onBoSuperSave()throws Exception{
+		super.onBoSave();
+	}
+	/**
+	 * 判断表头是否已经有单据号
+	 * */
+	protected boolean needBillNo(){
+		BillItem billcode=getBillCardPanelWrapper().getBillCardPanel().getHeadItem("vbillcode");
+		 Object value=null;
+		if(billcode!=null){
+			value=billcode.getValueObject();
+		}
+		 return Toolkits.isEmpty(value);
+	}
+	
+    /**
+     * 功能: 返回行数
+     * @author 公共开发者
+     * 2011-6-3 
+     */
+    protected int getRowCount(){
+   	 return getBillCardPanelWrapper().getBillCardPanel().getRowCount();
+    }
+
+	public String addCondtion() {
+    	return null;
+    }
+	
+	protected String strCon="";
+	/**
+     * 功能: 查询加条件,按制单日期排序
+     * @throws Exception
+     */
+    public void onBoQuery() throws Exception {
+    	StringBuffer strWhere = getWhere();
+        if (askForQueryCondition(strWhere) == false)
+            return;// 用户放弃了查询
+        Object makedate = getBillCardPanelWrapper().getBillCardPanel().getTailItem("dmakedate");
+        Object vbillcode = getBillCardPanelWrapper().getBillCardPanel().getHeadItem("vbillcode");
+        strWhere.append(" and pk_corp='"+_getCorp().getPk_corp()+"' ");
+        if(makedate!=null&&vbillcode!=null)
+        	strWhere.append(" order by dmakedate desc,vbillcode desc");
+        else if(makedate!=null)
+        	strWhere.append(" order by dmakedate desc");
+        else if(vbillcode!=null)
+        	strWhere.append(" order by vbillcode desc");
+        SuperVO[] queryVos = queryHeadVOs(strWhere.toString());
+        strCon=strWhere.toString();
+        getBufferData().clear();
+        addDataToBuffer(queryVos);
+        updateBuffer();
+    }
+	
+	/**
+	 * 返回查询条件
+	 * */
+	protected StringBuffer getWhere(){
+		return new StringBuffer();
+	}
+	
+	/**
+	 * 直接修改,不用填写申请单(系统原方法)
+	 */
+	protected void onBoDirectEdit() throws Exception {
+    	AggregatedValueObject avo=getBufferData().getCurrentVO();
+    	if(avo==null)return ;
+		super.onBoEdit();
+	}
+    
+	/** 
+	 * 2012-10-16 此方法提到基类来
+	 */
+	@Override
+	protected void onBoEdit() throws Exception {
+		AggregatedValueObject avo=getBufferData().getCurrentVO();
+    	if(avo==null)return ;
+		super.onBoEdit();
+		setModifyInfo();
+	}
+    
+
+	/**
+	 * 设置修改相关信息
+	 */
+	private void setModifyInfo() {
+		String[] strs = new String[]{"tmodifytime","modifyid","modifydate"};
+		BillItem time = null;
+		for (int i = 0; i < strs.length; i++) {
+			time = getBillCardPanelWrapper().getBillCardPanel().getTailItem(strs[i]);
+			if (time == null){
+				time = getBillCardPanelWrapper().getBillCardPanel().getHeadItem(strs[i]);
+			}
+			if(time != null){
+				if(strs[i].equals("tmodifytime"))
+					time.setValue(ClientEnvironment.getServerTime());
+				else if(strs[i].equals("modifyid"))
+					time.setValue(ce.getUser().getPrimaryKey());
+				else if(strs[i].equals("modifydate"))
+					time.setValue(ce.getDate());
+			}
+		}
+        
+	}
+
+
+	/**
+     * 功能: 做上下游单据时,调用setDefaultData()
+     * @param bo
+     * @author shipeng
+     * 2011-6-3 
+     */
+    public void onButton(ButtonObject bo){
+    	 super.onButton(bo);
+         try {
+             ButtonObject parent=bo.getParent();
+             if(!Toolkits.isEmpty(parent)){
+                 String code=bo.getParent().getCode();
+                 if("增加".equalsIgnoreCase(code) && 
+                         !"自制单据".equalsIgnoreCase(code)){
+                     getBillUI().setDefaultData();
+                 }
+                 String s=bo.getCode();
+                 BillModel bi = getBillCardPanelWrapper().getBillCardPanel().getBillModel();
+                 if (bi != null) {
+                   if ("自制单据".equalsIgnoreCase(s)){
+                     super.onBoLineAdd();
+                   }
+                 }
+             }
+         } catch (Exception e) {
+             e.printStackTrace();
+         }
+    }
+    	
+	  protected UFDate getUFDate(Object obj){
+		  if(!Toolkits.isEmpty(obj)){
+			  try{
+				  return new UFDate(obj.toString().trim());
+			  }catch(Exception e){
+				  return null;
+			  }
+		  }else{
+			  return null;
+		  }
+	  }
+	  protected UFDouble getUFDouble(Object obj){
+		  if(!Toolkits.isEmpty(obj)){
+			  try{
+				  return new UFDouble(obj.toString().trim());
+			  }catch(Exception e){
+				  return new UFDouble(0);
+			  }
+		  }else{
+			  return new UFDouble(0);
+		  }
+	  }
+	  protected UFDouble getUFDouble(String obj){
+		  if(!Toolkits.isEmpty(obj)){
+			  try{
+				  return new UFDouble(obj.trim());
+			  }catch(Exception e){
+				  return new UFDouble(0);
+			  }
+		  }else{
+			  return new UFDouble(0);
+		  }
+	  }
+	  protected Integer getInteger(Object obj){
+		  if(!Toolkits.isEmpty(obj)){
+			  try{
+				  return Integer.parseInt(obj.toString().trim());
+			  }catch(Exception e){
+				  return new Integer(0);
+			  }
+		  }else{
+			  return new Integer(0);
+		  }
+	  }
+	
+	  protected String getString(Object obj){
+		  if(!Toolkits.isEmpty(obj)){
+			  try{
+				  return obj.toString();
+			  }catch(Exception e){
+				  return "";
+			  }
+		  }else{
+			  return "";
+		  }
+	  }
+	  
+	  /**
+	   * 获取表头数据
+	   * */
+	  protected Object getHeadValue(String key){
+		  return getBillCardPanelWrapper().getBillCardPanel().getHeadItem(key).getValueObject();
+	  }
+	  
+	  /**
+	   * 获取表体数据
+	   * */
+	  protected Object getBodyValue(int row,String key){
+		  return getBillCardPanelWrapper().getBillCardPanel().getBodyValueAt(row, key);
+	  }
+	  
+	  /**
+	   * 向表体塞值
+	   * */
+	  protected void setBodyValue(Object obj,int row,String key){
+		   getBillCardPanelWrapper().getBillCardPanel().setBodyValueAt(obj,row, key);
+	  }
+	  
+	  /**
+	   * 多子表向表体塞值
+	   * */
+	  protected void setBodyValueByTableCode(String tablecode,Object obj,int row,String key){
+		   getBillCardPanelWrapper().getBillCardPanel().getBillModel(tablecode).setValueAt(obj,row, key);
+	  }
+	  
+	  /**
+	   * 多子表向表体塞值
+	   * */
+	  protected Object getBodyValueByTableCode(String tablecode,int row,String key){
+		   return getBillCardPanelWrapper().getBillCardPanel().getBillModel(tablecode).getValueAt(row, key);
+	  }
+	  
+	  /**
+	   * 向表体塞值
+	   * */
+	  protected void setBodyValue(Object[] obj,int row,String[] key){
+		  for(int i=0;i<key.length;i++){
+			  getBillCardPanelWrapper().getBillCardPanel().setBodyValueAt(obj[i],row, key[i]);
+		  }
+	  }
+	  
+	  /**
+	   * 设置所有项不可编辑
+	   * */
+		protected void setAllItemEditFalse() {
+			//表头全不编辑
+			BillItem[] headits = getBillCardPanelWrapper().getBillCardPanel().getHeadItems();
+			for(int i=0;i<headits.length;i++){
+				headits[i].setEnabled(false);
+			}
+			//表体全不可编辑
+			BillItem[] bodyits = getBillCardPanelWrapper().getBillCardPanel().getBodyItems();
+			for(int i=0;i<bodyits.length;i++){
+				bodyits[i].setEdit(true);
+				bodyits[i].setEnabled(false);
+			}
+		}
+		
+	  /**
+	   * 设置所有项可编辑
+	   * @author 公共开发者
+	   * @param String[] headkey
+	   * @param String []bodykey
+	   * @serialData 2011-6-3
+	   * */
+		protected void setAllItemEditTrue(String[] headkey,String []bodykey) {
+			//表头可编辑
+			for(int i=0;i<headkey.length;i++){
+				getBillCardPanelWrapper().getBillCardPanel().getHeadItem(headkey[i]).setEdit(true);
+			}
+			//表体可编辑
+			for(int i=0;i<bodykey.length;i++){
+				getBillCardPanelWrapper().getBillCardPanel().getBodyItem(bodykey[i]).setEdit(true);
+			}
+		}
+		
+		/**
+		 * 修改行状态
+		 * */
+		public void setrowstatus(String modelname){
+			BillModel bm = getBillCardPanelWrapper().getBillCardPanel().getBillModel(modelname);
+			int rows = bm.getRowCount();
+	        for(int i=0;i<rows;i++){
+	            bm.setRowState(i, BillModel.MODIFICATION);
+	        }
+		}
+		
+		/**
+		 * 获取登陆人姓名
+		 * @author 公共开发者
+		 * @return String 
+		 * */
+		public  String getOperName(){
+			String operator=null;
+			String sql=" select user_name from sm_user where cuserid = '"+_getOperator()+"'";
+			try {
+				operator=Proxy.getItf().queryStrBySql(sql);
+			} catch (BusinessException e1) {
+				e1.printStackTrace();
+			}
+			return operator;
+		}
+		
+		 /**
+		  * 功能:隐藏行
+		  * @author 公共开发者
+		  * 2011-6-3 14:30:02
+		  */
+		 public void  hidLine(){
+			 this.getButtonManager().getButton( IBillButton.Line).setVisible(false);
+		 }
+		 /**
+		  * 功能:显示行
+		  * @author 公共开发者
+		  * 2011-6-3 14:30:02
+		  */
+		 public void  showLine(){
+			 this.getButtonManager().getButton( IBillButton.Line).setVisible(true);
+		 }
+		 
+		 /**
+		 * @功能：汇总表体项值的总和到表头项
+		 * @param: headitemname 表头项名称
+		 * @param: bodyitemname 表体项名称
+		 * 
+		 */
+		public void groupBodyValueToHead(String headitemname,String bodyitemname){
+			UFDouble sum = new UFDouble(0.00);
+			int rowcount = getBillCardPanelWrapper().getBillCardPanel().getBillModel().getRowCount();
+			for(int i=0;i<rowcount;i++){
+				UFDouble itemvalue = getBodyValue(i, bodyitemname)==null?new UFDouble(0.00):new UFDouble(getBodyValue(i, bodyitemname).toString());
+				sum = sum.add(itemvalue);
+			}
+			getBillCardPanelWrapper().getBillCardPanel().getHeadItem(headitemname).setValue(sum);
+		}	
+		
+		
+		/**
+		 * 
+		* @功能: 得到表体某列
+		* @作者 朱永波  
+		* @创建时间 2011-7-7 上午10:46:40
+		* @throws
+		 */
+		public String[] getColValueArr(String tablemodel,String key){
+			
+			int count = getBillCardPanelWrapper().getBillCardPanel().getBillTable(""+tablemodel+"").getRowCount();
+			String[] code = new String[count];
+			for (int i = 0; i < code.length; i++) {
+				code[i] = getBillCardPanelWrapper().getBillCardPanel().getBillModel(""+tablemodel+"").getValueAt(i, ""+key+"")==null?"":
+					getBillCardPanelWrapper().getBillCardPanel().getBillModel(""+tablemodel+"").getValueAt(i, ""+key+"").toString();
+			}
+			
+			return code;
+		}
+		/**
+		 * 
+		* @功能: 得到表体某列
+		* @作者 朱永波  
+		* @创建时间 2011-7-7 上午10:46:40
+		* @throws
+		 */
+		public String getColValue(String tablemodel,String key){
+			
+			int count = getBillCardPanelWrapper().getBillCardPanel().getBillTable(""+tablemodel+"").getRowCount();
+			String[] code = new String[count];
+			for (int i = 0; i < code.length; i++) {
+				code[i] = getBillCardPanelWrapper().getBillCardPanel().getBillModel(""+tablemodel+"").getValueAt(i, ""+key+"")==null?"":
+					getBillCardPanelWrapper().getBillCardPanel().getBillModel(""+tablemodel+"").getValueAt(i, ""+key+"").toString();
+			}
+			String bdcodes = Toolkits.combinArrayToString(code);
+			
+			return bdcodes;
+		}
+		/**
+		 * @param table
+		 * @param col
+		 * @param value
+		 * @param conditioncol
+		 * @param conditionvalues
+		 * @throws BusinessException
+		 * 前台废弃此功能
+		 */
+		@Deprecated
+		public void backBillUp(String table,String col,String value,String conditioncol,String conditionvalues) throws BusinessException{
+			StringBuffer sbf = new StringBuffer();
+			sbf.append(" update "+table+" set "+col+"='"+value+"' where nvl(dr,0)=0 and "+conditioncol+" in "+conditionvalues+"");
+			
+			try {
+				Proxy.getItf().updateBYsql(sbf.toString());
+			} catch (BusinessException e) {
+				e.printStackTrace();
+				throw new BusinessException(e.getMessage()+": 回写失败");
+			}
+			
+		}
+		/**
+		 * 
+		 * @功能 更新单行的数据
+		 * @throws BusinessException
+		 * 前台此功能废弃 edit by gdt
+		 */
+		@Deprecated
+		public void backBillUpOnly(String table,String col,String value,String conditioncol,String conditionvalues) throws BusinessException{
+			StringBuffer sbf = new StringBuffer();
+			sbf.append(" update "+table+" set "+col+"='"+value+"' where nvl(dr,0)=0 and "+conditioncol+" = '"+conditionvalues+"'");
+			
+			try {
+				Proxy.getItf().updateBYsql(sbf.toString());
+			} catch (BusinessException e) {
+				e.printStackTrace();
+				throw new BusinessException(e.getMessage()+": 回写失败");
+			}
+			
+		}
+		/**
+		 * 与后台校验zdname是否雷同
+		 * @return 
+		 * @throws Exception 
+		 * */
+		protected boolean issame(String zdname) throws Exception {
+	        //保存时不允许为空
+	        try {
+				getBillCardPanelWrapper().getBillCardPanel().getBillData().dataNotNullValidate();
+			} catch (ValidationException e1) {
+				e1.printStackTrace();
+			}
+			
+	    	AggregatedValueObject avo=getBillUI().getChangedVOFromUI();
+	    	if(avo==null)return true;
+	        SuperVO vo=(SuperVO) avo.getParentVO();
+	        String zdnamevalue = Toolkits.getString(vo.getAttributeValue(zdname));
+	        String pk_name = vo.getPKFieldName();
+	        String pk_value = Toolkits.getString(vo.getPrimaryKey());
+	        String tablename = vo.getTableName();
+	        String pk_corp = Toolkits.getString(vo.getAttributeValue("pk_corp"));
+	        String wheresql = pk_value.equals("")?"":" and "+pk_name+"!='"+pk_value+"'";
+	        String sql = "select count("+pk_name+") from "+tablename+" where pk_corp='"+pk_corp+"' "+wheresql+" and "+zdname+"='"+zdnamevalue+"' and nvl(dr,0)=0 ";
+			String count;
+			try {
+				count = Proxy.getItf().queryStrBySql(sql);
+				if(Toolkits.getUFDouble(count).doubleValue()>0){
+					return true;
+				}
+			} catch (BusinessException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+		
+		protected boolean issame2(String zdname, Object pk) throws Exception {
+	        //保存时不允许为空
+	        try {
+				getBillCardPanelWrapper().getBillCardPanel().getBillData().dataNotNullValidate();
+			} catch (ValidationException e1) {
+				e1.printStackTrace();
+			}
+			
+	    	AggregatedValueObject avo=getBillUI().getChangedVOFromUI();
+	    	if(avo==null)return true;
+	        SuperVO vo=(SuperVO) avo.getParentVO();
+	        String zdnamevalue = Toolkits.getString(vo.getAttributeValue(zdname));
+	        String pk_name = vo.getPKFieldName();
+	        String tablename = vo.getTableName();
+	        String sql = "select count("+pk_name+") from "+tablename+" where "+zdname+"='"+zdnamevalue+"' and nvl(dr,0)=0 ";
+	        if(!Toolkits.isEmpty(pk)){//修改时排除自身PK
+	        	sql += " and "+pk_name+"<>'"+pk+"' ";
+	        }
+			String count;
+			try {
+				count = Proxy.getItf().queryStrBySql(sql);
+				if(Toolkits.getUFDouble(count).doubleValue()>0){
+					return true;
+				}
+			} catch (BusinessException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+		/**
+		 * 增加pk_corp
+		 * @param zdname
+		 * @param pk
+		 * @param pk_corp
+		 * @return
+		 * @throws Exception
+		 */
+		protected boolean issame3(String zdname, Object pk,Object pk_corp) throws Exception {
+	        //保存时不允许为空
+	        try {
+				getBillCardPanelWrapper().getBillCardPanel().getBillData().dataNotNullValidate();
+			} catch (ValidationException e1) {
+				e1.printStackTrace();
+			}
+			
+	    	AggregatedValueObject avo=getBillUI().getChangedVOFromUI();
+	    	if(avo==null)return true;
+	        SuperVO vo=(SuperVO) avo.getParentVO();
+	        String zdnamevalue = Toolkits.getString(vo.getAttributeValue(zdname));
+	        String pk_name = vo.getPKFieldName();
+	        String tablename = vo.getTableName();
+	        String sql = "select count("+pk_name+") from "+tablename+" where "+zdname+"='"+zdnamevalue+"' and pk_corp = '"+pk_corp+"' and nvl(dr,0)=0 ";
+	        if(!Toolkits.isEmpty(pk)){//修改时排除自身PK
+	        	sql += " and "+pk_name+"<>'"+pk+"' ";
+	        }
+			String count;
+			try {
+				count = Proxy.getItf().queryStrBySql(sql);
+				if(Toolkits.getUFDouble(count).doubleValue()>0){
+					return true;
+				}
+			} catch (BusinessException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+		
+		/**
+		 * 获取表体值
+		 * @param java.lang.String key
+		 * @param int row
+		 * @author shipeng
+		 * @serialData 2011-8-4
+		 * @return Object
+		 * */
+		protected Object getBodyValue(String key,int row){
+			return getBillCardPanelWrapper().getBillCardPanel().getBodyValueAt(row, key);
+		}
+		 /**
+	      * 附件：文档管理功能
+		 * @param abstractBillUI 
+	      */
+	 	protected void onBoDocManage(AbstractBillUI abstractBillUI) throws Exception{
+	         // 文档管理
+	         String pk = abstractBillUI.getVOFromUI().getParentVO().getPrimaryKey();
+	         String billcode = abstractBillUI.getVOFromUI().getParentVO().getAttributeValue("vbillcode")==null?"":abstractBillUI.getVOFromUI().getParentVO().getAttributeValue("vbillcode").toString();
+	         if (pk ==null || pk.equals("")){
+	        	 abstractBillUI.showWarningMessage("项目保存以后才可以使用文档功能！");
+	             return;
+	         }
+	         FileManagerDialog dlg = new FileManagerDialog(abstractBillUI, new String[] { pk }, new String[] { billcode });
+	         dlg.setTitle( "单据文档管理");
+	         dlg.setShowStyle(FileManagerDialog.SHOW_FILE_LOCAL);
+	         if (dlg.showModal() == nc.ui.pub.beans.UIDialog.ID_CANCEL)
+	             return;
+	         String dir = dlg.getDir();
+	         String fileName = dlg.getSelectedFileName();
+	         dlg.dispose();
+	         FileManagerUtil.showFileLocal(dir, fileName);
+	     }
+
+		/**
+	     * 功能: 汇总表体到表头(公供多表体单据使用)
+	     * @param bodyedit 要汇总的表体项
+	     * @param headedit 汇总的表头项
+	     * @return void
+	     */
+	    protected void totalBodyToHead(String bodytablecode,String bodyedit,String headedit){
+	        
+	        int rowsNum=getBillCardPanelWrapper().getBillCardPanel().getBillModel(bodytablecode).getRowCount();
+	        UFDouble value = new UFDouble();
+	        for(int i=0;i<rowsNum;i++){
+	            if(getBillCardPanelWrapper().getBillCardPanel().getBillModel(bodytablecode).getValueAt(i, bodyedit)!=null){
+	            	value=value.add(new UFDouble(getBillCardPanelWrapper().getBillCardPanel().getBillModel(bodytablecode).getValueAt(i, bodyedit).toString()));    
+	            }
+	       }
+	       BillItem bi = getBillCardPanelWrapper().getBillCardPanel().getHeadItem(headedit);
+	       if(bi!=null){
+	    	   getBillCardPanelWrapper().getBillCardPanel().getHeadItem(headedit).setValue(value);
+	       }
+	    }
+	    
+	    /**
+		 * @param hvo
+		 * @throws BusinessException
+		 * 是否已定义审批流程
+		 */
+		protected boolean hashDefProce(String pk_corp,String billtype,String pk_operator) throws BusinessException {
+			IWorkflowDefine wfDefine = (IWorkflowDefine) NCLocator.getInstance().lookup(IWorkflowDefine.class.getName());
+			WorkflowDefinitionVO[] existProcDefs = wfDefine.findDefinitionsWithoutContent(pk_corp,IPFConfigInfo.STATEBUSINESSTYPE, billtype,
+							false, IApproveflowConst.WORKFLOW_TYPE_APPROVE, false);
+			List<String> userpro = new ArrayList<String>();//启动者为用户的审批流程
+			List<String> rolepro = new ArrayList<String>();//启动者为角色的审批流程
+			for (int i = 0; i < existProcDefs.length; i++) {
+				if(!existProcDefs[i].getBillmaker_type().equals("ROLE")){
+					userpro.add(existProcDefs[i].getBillmaker());
+				}else{
+					rolepro.add(existProcDefs[i].getBillmaker());
+				}
+			}
+			
+			if(userpro.contains(pk_operator)){
+				return true;
+			}else{
+				if(rolepro.size() == 0){
+					return false;
+				}
+				//判断启动者为角色的是否包含当前单据的操作人
+				String[] pks = rolepro.toArray(new String[rolepro.size()]); 
+				String sql = " select 1 from sm_user_role a where a.pk_role in ("+Toolkits.combinArrayToString3(pks)+") and a.cuserid='"+pk_operator+"'";
+				String str = Proxy.getItf().queryStrBySql(sql);
+				if(!Toolkits.isEmpty(str)){
+					return true;
+				}
+			}
+			
+			return false;
+			
+		}
+		
+		/**
+		 * 获取多子表页签模板
+		 * */
+		public BillModel getModelByName(String modelName){
+			return getBillCardPanelWrapper().getBillCardPanel().getBillModel(modelName);
+		}
+		
+		/**
+		 * 用于自定义保存方法后更新界面缓存数据
+		 * @author 施鹏
+		 * @throws Exception 
+		 * @time 2014-03-23
+		 * */
+		protected void onPriSaveUpdateBuffer(boolean isSave,AggregatedValueObject avo) throws Exception{
+			int nCurrentRow = -1;
+			if (isSave) {
+				if (isEditing()) {
+					if (getBufferData().isVOBufferEmpty()) {
+						getBufferData().addVOToBuffer(avo);
+						nCurrentRow = 0;
+
+					} else {
+						getBufferData().setCurrentVO(avo);
+						nCurrentRow = getBufferData().getCurrentRow();
+					}
+				} else {
+					getBufferData().addVOsToBuffer(
+							new AggregatedValueObject[] { avo });
+					nCurrentRow = getBufferData().getVOBufferSize() - 1;
+				}
+			}
+
+			if (nCurrentRow >= 0) {
+				getBufferData().setCurrentRowWithOutTriggerEvent(nCurrentRow);
+			}
+			
+			setAddNewOperate(isAdding(), avo);
+
+			// 设置保存后状态
+			setSaveOperateState();
+			
+			if (nCurrentRow >= 0) {
+				getBufferData().setCurrentRow(nCurrentRow);
+			}
+			
+		}
+		
+		
+		//对比月订货，月销售，日订货，日销售的子子表和子表数量是否一致  cm
+		public boolean contrastNum(SuperVO[]bvo,SuperVO[]bbvo,int flag) throws Exception{
+			HashMap<String, UFDouble> mapfnumb=new HashMap<String,UFDouble>();//按照包装类别主键存放子表数量
+			HashMap<String, UFDouble> mapfnumbb=new HashMap<String,UFDouble>();//按照包装类别主键存放子子表数量
+			if(bbvo!=null){
+				for (int i = 0; i < bbvo.length; i++) {
+					String pk_packdoc = null;
+					UFDouble fnumbb = null;
+					if(flag==1){//月销售计划
+						pk_packdoc = bbvo[i].getAttributeValue("dschdate").toString();
+						fnumbb=(UFDouble) bbvo[i].getAttributeValue("fschnum");//数量
+					}else if(flag==2){//日销售计划
+						pk_packdoc = bbvo[i].getAttributeValue("pk_cumandoc").toString();//dschdate
+						fnumbb=(UFDouble) bbvo[i].getAttributeValue("fschnum");//数量
+					}else if(flag==0){//日订货计划，月订货计划
+						String sql="select pk_packdoc from  yj_pinvrelationship a, yj_pinvrelationship_b b,bd_invmandoc c where a.pk_pinvrelationship=b.pk_pinvrelationship "+
+						" and a.pk_corp='0001' and b.pk_invmandoc=c.pk_invbasdoc and nvl(a.dr,0)=0 and nvl(b.dr,0)=0 and c.pk_invmandoc='"+bbvo[i].getAttributeValue("pk_invmandoc").toString()+"'";
+						pk_packdoc=Proxy.getItf().queryStrBySql(sql);
+						fnumbb=(UFDouble) bbvo[i].getAttributeValue("fnum");//数量
+					}
+					//获取包装类别子子表数量
+					if(fnumbb!=null){
+						if(mapfnumbb.containsKey(pk_packdoc)){
+							UFDouble curfnum=mapfnumbb.get(pk_packdoc)==null?new UFDouble(0):mapfnumbb.get(pk_packdoc);
+							curfnum=curfnum.add(fnumbb);
+							mapfnumbb.put(pk_packdoc, curfnum);
+						}else{
+							mapfnumbb.put(pk_packdoc, fnumbb);
+						}
+					}
+				}
+				for (int i = 0; i < bvo.length; i++) {
+					if(flag==1){//月销售计划
+						mapfnumb.put(bvo[i].getAttributeValue("ddate").toString(), (UFDouble)bvo[i].getAttributeValue("ftotalenum"));
+					}else if(flag==2){//日销售计划
+						String pk_cumandoc = bvo[i].getAttributeValue("pk_cumandoc").toString();
+						UFDouble cumandocnum =(UFDouble)bvo[i].getAttributeValue("ftotalenum");
+						if(mapfnumb.containsKey(pk_cumandoc)){
+							UFDouble curfnum=mapfnumb.get(pk_cumandoc)==null?new UFDouble(0):mapfnumb.get(pk_cumandoc);
+							curfnum=curfnum.add(cumandocnum);
+							mapfnumb.put(pk_cumandoc, curfnum);
+						}else{
+							mapfnumb.put(pk_cumandoc, cumandocnum);
+						}
+					}else if(flag==0){//日订货计划，月订货计划
+						mapfnumb.put(bvo[i].getAttributeValue("pk_packdoc").toString(), (UFDouble)bvo[i].getAttributeValue("fnum"));
+					}
+				}
+				Iterator<Map.Entry<String, UFDouble>>it=mapfnumb.entrySet().iterator();
+				while(it.hasNext()){
+					String key=it.next().getKey();
+					UFDouble valueb=mapfnumb.get(key);
+					UFDouble valuebb=mapfnumbb.get(key)==null?new UFDouble(0):mapfnumbb.get(key);
+					if(valueb.sub(valuebb).getDouble()!=0.0){
+						if(flag==1){
+							showErrorMessage("日期为: <"+key+"> 按天汇总数量和包装明细数量不一致!");
+						}else if(flag==2){
+							String sql="select custname from bd_cubasdoc cub left join bd_cumandoc cum on cub.pk_cubasdoc = cum.pk_cubasdoc where cum.pk_cumandoc = '"+key+"'";
+							String custname=Proxy.getItf().queryStrBySql(sql);
+							showErrorMessage("客户为: <"+custname+"> 按天汇总数量和包装明细数量不一致!");
+						}else if(flag==0){
+							if(mapfnumbb.containsKey(key)){
+								//先注销，月订货计划支持手工添加汇总或者明细，不校验两边数量的一致性
+								String sql="select packname from  yj_packdoc where pk_packdoc = '"+key+"'";
+								String packname=Proxy.getItf().queryStrBySql(sql);
+								showErrorMessage("包装类别为: <"+packname+"> 包装汇总数量和单品明细数量不一致!");	
+							}else{
+								continue;
+							}
+						}
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+		
+		
+		//关于指标性质      红色判定，争议判定 end
+}

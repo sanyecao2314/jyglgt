@@ -1,0 +1,15 @@
+package nc.vo.jyglgt.pub.Toolkits;
+
+/**
+ * @author 公共开发者
+ * 二开单据类型
+ */
+public interface IJyglgtBillType {
+	
+
+	/**采购奖罚单 		结点400420 **/
+	public static final String JY01 = "JY01";
+	/**销售价格政策 		结点400670 **/
+	public static final String JY02 = "JY02";
+
+}
